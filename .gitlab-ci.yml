@@ -1,0 +1,11 @@
+include:
+  project: 'corp/automation/cicd/templates'
+  ref: 1.0.17
+  file:
+    - '/pipelines/templates/common-automation-settings.yml'
+    - '/pipelines/templates/common-automation-workflow.yml'
+    - '/pipelines/templates/common-automation-prereq-test.yml'
+    - '/pipelines/templates/common-automation-prereq-gitlab-scanning.yml'
+
+
+
