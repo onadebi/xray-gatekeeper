@@ -17,9 +17,6 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import java.io.File;
-import java.io.IOException;
-
 @Service
 public class XRayService {
     private final WebClient webClient;
@@ -90,14 +87,14 @@ public class XRayService {
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
 
         builder.part("results", results.getResource())
-                .header("Content-Disposition", "form-data; name=file1; filename=" + results.getOriginalFilename());
+                .header("Content-Disposition", "form-data; name=results; filename=" + results.getOriginalFilename());
         builder.part("info", info.getResource())
-                .header("Content-Disposition", "form-data; name=file2; filename=" + info.getOriginalFilename());
+                .header("Content-Disposition", "form-data; name=info; filename=" + info.getOriginalFilename());
         // Create the MultiValueMap for the body
         MultiValueMap<String, HttpEntity<?>> multipartBody = builder.build();
-        // Send the files to the external service using WebClient
+
         Mono<ResponseEntity<XrayAppResponse>> respEntity = webClient.post()
-                .uri("/api/v2/import/execution/junit/multipart")
+                .uri("/import/execution/junit/multipart")
                 .headers(httpHeaders -> {
                     httpHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
                     httpHeaders.setBearerAuth(token); // will automatically format the "Bearer " prefix
@@ -131,12 +128,4 @@ public class XRayService {
             }).subscribeOn(Schedulers.boundedElastic());
         return objResp;
     }
-
-    //#region Helper method to convert MultipartFile to a File
-//    private File convertToFile(MultipartFile file) throws IOException {
-//        File convFile = new File(System.getProperty("java.io.tmpdir") + "/" + file.getOriginalFilename());
-//        file.transferTo(convFile);
-//        return convFile;
-//    }
-    //#endregion
 }
