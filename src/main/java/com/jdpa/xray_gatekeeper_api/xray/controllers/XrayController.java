@@ -5,11 +5,8 @@ import com.jdpa.xray_gatekeeper_api.xray.models.XrayAuth;
 import com.jdpa.xray_gatekeeper_api.xray.services.XRayService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -32,6 +29,15 @@ public class XrayController {
     @PostMapping("/authenticate")
     public Mono<ResponseEntity<AppResponse<String>>> Auth(@RequestBody XrayAuth request){
         return _xrayService.AuthenticateXRay(request)
+                .map(appResponse -> ResponseEntity
+                        .status(appResponse.getStatCode())
+                        .body(appResponse));
+    }
+
+    @PostMapping("/junit/multipart")
+    public Mono<ResponseEntity<AppResponse<String>>> junit(@RequestParam("results") MultipartFile results,
+                                                           @RequestParam("info") MultipartFile info){
+        return _xrayService.PublishJunitToXray(results,info)
                 .map(appResponse -> ResponseEntity
                         .status(appResponse.getStatCode())
                         .body(appResponse));
