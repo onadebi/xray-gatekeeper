@@ -1,6 +1,8 @@
 package com.jdpa.xray_gatekeeper_api.xray.controllers;
 
+import com.jdpa.xray_gatekeeper_api.helpers.Validators;
 import com.jdpa.xray_gatekeeper_api.xray.dtos.AppResponse;
+import com.jdpa.xray_gatekeeper_api.xray.dtos.XrayAppResponse;
 import com.jdpa.xray_gatekeeper_api.xray.models.XrayAuth;
 import com.jdpa.xray_gatekeeper_api.xray.services.XRayService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,9 +37,10 @@ public class XrayController {
     }
 
     @PostMapping("/junit/multipart")
-    public Mono<ResponseEntity<AppResponse<String>>> junit(@RequestParam("results") MultipartFile results,
-                                                           @RequestParam("info") MultipartFile info){
-        return _xrayService.PublishJunitToXray(results,info)
+    public Mono<ResponseEntity<AppResponse<XrayAppResponse>>> junit(@RequestParam("results") MultipartFile results,
+                                                                    @RequestParam("info") MultipartFile info){
+        String token= Validators.extractBearerToken();
+        return _xrayService.PublishJunitToXray(results,info, token)
                 .map(appResponse -> ResponseEntity
                         .status(appResponse.getStatCode())
                         .body(appResponse));

@@ -5,8 +5,10 @@ import lombok.Setter;
 
 @Setter
 @Getter
-public class AppError {
+public class XrayAppResponse {
     // Getter and Setter
     private String error;
-
+    private String id;
+    private String key;
+    private String self;
 }
