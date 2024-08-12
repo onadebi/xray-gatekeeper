@@ -128,4 +128,63 @@ public class XRayService {
             }).subscribeOn(Schedulers.boundedElastic());
         return objResp;
     }
+
+    public Mono<AppResponse<XrayAppResponse>> PublishCucumberToXray(MultipartFile results, MultipartFile info, String token){
+        if(token == null || token.isBlank()){
+            return Mono.just(AppResponse.failed(null, "Invalid token passed", 400));
+        }
+        Mono<AppResponse<XrayAppResponse>> objResp;
+        if(results == null || info == null){
+            return Mono.just(AppResponse.failed(null, "BadRequest: results or info file is null", 400));
+        }
+        if(!Validators.isJsonFile(results) || !Validators.isJsonFile(info)){
+            return Mono.just(AppResponse.failed(null,"Both files 'results' and 'info' file must be JSON format", 400));
+        }
+        if(results.getSize() > Validators.valueMegabytes(5) || info.getSize() > Validators.valueMegabytes(5)){
+            return Mono.just(AppResponse.failed(null,"File size upload must not exceed 5MB", 400));
+        }
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+
+        builder.part("results", results.getResource())
+                .header("Content-Disposition", "form-data; name=results; filename=" + results.getOriginalFilename());
+        builder.part("info", info.getResource())
+                .header("Content-Disposition", "form-data; name=info; filename=" + info.getOriginalFilename());
+        // Create the MultiValueMap for the body
+        MultiValueMap<String, HttpEntity<?>> multipartBody = builder.build();
+
+        Mono<ResponseEntity<XrayAppResponse>> respEntity = webClient.post()
+                .uri("/import/execution/cucumber/multipart")
+                .headers(httpHeaders -> {
+                    httpHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
+                    httpHeaders.setBearerAuth(token); // will automatically format the "Bearer " prefix
+                })
+                .body(BodyInserters.fromMultipartData(multipartBody))
+                .retrieve()
+                .toEntity(XrayAppResponse.class);
+        objResp = respEntity.flatMap(resp->{
+            int statusCode = resp.getStatusCode().value();
+            XrayAppResponse responseBody = resp.getBody();
+            if (statusCode == HttpStatus.OK.value()) {
+                return Mono.just(AppResponse.success(responseBody, statusCode));
+            } else {
+                return Mono.just(AppResponse.failed(responseBody, "Non-200 status code: " + statusCode, statusCode));
+            }
+        }).onErrorResume(err-> {
+            if (err instanceof WebClientResponseException webClientResponseException) {
+                int statCode = webClientResponseException.getStatusCode().value();
+                String responseBody = webClientResponseException.getResponseBodyAsString();
+                ObjectMapper _mapper = new ObjectMapper();
+                try {
+                    XrayAppResponse errMessage = _mapper.readValue(responseBody, XrayAppResponse.class);
+                    responseBody = errMessage.getError();
+                } catch (JsonProcessingException ex) {
+                    System.out.println(ex.getMessage());
+                }
+                return Mono.just(AppResponse.failed(null, "Error: " + responseBody, statCode));
+            } else {
+                return Mono.just(AppResponse.failed(null, "Error: " + err.getMessage(), 500));
+            }
+        }).subscribeOn(Schedulers.boundedElastic());
+        return objResp;
+    }
 }

@@ -45,4 +45,14 @@ public class XrayController {
                         .status(appResponse.getStatCode())
                         .body(appResponse));
     }
+
+    @PostMapping("/cucumber/multipart")
+    public Mono<ResponseEntity<AppResponse<XrayAppResponse>>> cucumber(@RequestParam("results") MultipartFile results,
+                                                                    @RequestParam("info") MultipartFile info){
+        String token= Validators.extractBearerToken();
+        return _xrayService.PublishCucumberToXray(results,info, token)
+                .map(appResponse -> ResponseEntity
+                        .status(appResponse.getStatCode())
+                        .body(appResponse));
+    }
 }
