@@ -1,12 +1,148 @@
-# xray-gatekeeper
+#  <span style='color:cornflowerblue'>Xray-gatekeeper</span>
+
+Xray GateKeeper is a SpringBoot application designed to act as a gatekeeper for applications interacting with XRay cloud to public results to Jira. Being API based, it can work with Playwright and Java test frameworks.
+
+## Implemented endpoints:
+
+The application would provide several endpoints for interacting with Xray cloud. The base endpoint is of the format ```http://localhost:8080/api/v2/xray``` . The inputs format for the endpoints may vary depending on endpoint being executed. Generally the response would have a format of:
+```json
+{
+    "result": "",
+    "error": null,
+    "success": true,
+    "statCode": 200
+}
+```
+**Results** would contain any response from the server and may be a simple string or object type. **Success** is always a boolean indicating of the intended operation was successful or not. **Statcode** would convey the server status code response and **Error** may be null if no errors or convey any error message if present.
+<br/>Some of these endpoints include:
+
+> 1. **XRay Authentication** (`/authenticate`): This endpoint is used to authenticate against the XRay cloud. The endpoint expects input parameters in JSON format as defined below:
+```json
+{
+    "client_id": "******",
+    "client_secret": "******"
+}
+```
+
+> 2. **Upload JUnit Xml Report** (`/junit/multipart`): This endpoint passes to the server as header, a Bearer token gotten from successful authentication from `/authenticate` endpoint. Two files are passed `xray-report.xml` and `project-info.json` as parameters `results` and `info` respectively.
+<p>The <code>xray-report.xml</code> has sample format:</p>
+
+```xml
+<testsuites id="" name="" tests="2" failures="0" skipped="0" errors="0" time="16.337399000003934">
+	<testsuite name="example.spec.ts" timestamp="2024-08-12T21:48:13.173Z" hostname="chromium" tests="2" failures="0" skipped="0" time="26.429" errors="0">
+		<testcase name="Page has valid title" classname="example.spec.ts" time="12.859">
+		</testcase>
+		<testcase name="Get started link" classname="example.spec.ts" time="13.57">
+		</testcase>
+	</testsuite>
+</testsuites>
+```
+<p>The <code>project-info.json</code> has sample format:</p>
+
+```json
+{
+    "fields": {
+        "project": {
+            "id": "10006"
+        },
+        "summary": "JDPA new Test execution",
+        "issuetype": {
+            "id": "10025"
+        },
+        "labels" : ["Epic"]
+    }
+}
+```
+<i>issuetype</i> is Jira IssueType '<i>Test Execution</i>' id.
 
 
+> 3. **Upload Cucumber Json Report** (`/cucumber/multipart`): This endpoint passes to the server as header, a Bearer token gotten from successful authentication from `/authenticate` endpoint. Two files are passed `results.json` and `issueFields.json` as parameters `results` and `info` respectively.
+<p>The <code>results.json</code> has sample format:</p>
 
-## Getting started
+```json
+[
+  {
+    "description": "",
+    "elements": [
+      {
+        "description": "",
+        "id": "validate-that-entries-on-home-are-consistent-in-functionality-and-expected-values;validate-count-of-available-pizzas-is-same-as-that-of-the-listed",
+        "keyword": "Scenario",
+        "line": 4,
+        "name": "Validate count of available pizzas is same as that of the listed",
+        "steps": [
+          {
+            "keyword": "Before",
+            "hidden": true,
+            "result": {
+              "status": "passed",
+              "duration": 1074620900
+            }
+          },
+          {
+            "arguments": [],
+            "keyword": "Given ",
+            "line": 5,
+            "name": "Home page should have a title",
+            "match": {
+              "location": "src\\test\\steps\\homepagesteps.spec.ts:21"
+            },
+            "result": {
+              "status": "passed",
+              "duration": 12860438000
+            }
+          }
+		  ],
+        "tags": [
+          {
+            "name": "@CORP-42",
+            "line": 3
+          }
+        ],
+        "type": "scenario"
+      }
+    ],
+    "id": "validate-that-entries-on-home-are-consistent-in-functionality-and-expected-values",
+    "line": 1,
+    "keyword": "Feature",
+    "name": "Validate that entries on home are consistent in functionality and expected values",
+    "tags": [],
+    "uri": "src\\test\\features\\homepage.feature"
+  },
+  {
+    "description": "",
+    "elements": [],
+    "id": "creation-of-custom-pizza-with-selected-toppings",
+    "line": 1,
+    "keyword": "Feature",
+    "name": "Creation of custom Pizza with selected toppings",
+    "tags": [],
+    "uri": "src\\test\\features\\pizzacreations.feature"
+  }
+]
+```
+<p>The <code>issueFields.json</code> has sample format:</p>
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+```json
+{
+  "fields": {
+    "project": {
+      "id": "10006"
+    },
+    "summary": "JDPA new Test execution",
+    "issuetype": {
+      "id": "10025"
+    },
+    "labels" : ["Epic"]
+  },
+  "xrayFields": {
+    "testPlanKey": "CORP-41"
+  }
+}
+```
+<i>testPlanKey</i> is jira issue of type '<i>Test Plan</i>' key.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+
 
 ## Add your files
 
@@ -19,75 +155,3 @@ git remote add origin https://git.autodatacorp.org/corp/automation/libraries/xra
 git branch -M main
 git push -uf origin main
 ```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://git.autodatacorp.org/corp/automation/libraries/xray-gatekeeper/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
