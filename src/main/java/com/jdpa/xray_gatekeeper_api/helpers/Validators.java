@@ -16,6 +16,23 @@ public class Validators {
         return MediaType.APPLICATION_JSON_VALUE.equals(file.getContentType());
     }
 
+    public static boolean isFeatureFile(MultipartFile file) {
+        if(file != null && file.getContentType() != null){
+            return file.getOriginalFilename() != null && file.getOriginalFilename().toLowerCase().endsWith(".feature");
+        }else{
+            return false;
+        }
+    }
+
+    public static boolean isZipFile(MultipartFile file) {
+        if(file != null && file.getContentType() != null){
+            return "application/zip".equals(file.getContentType())
+                    || (file.getOriginalFilename() != null && file.getOriginalFilename().toLowerCase().endsWith(".zip"));
+        }else{
+            return false;
+        }
+    }
+
     public static long valueMegabytes(long value) {
         return value * 1024 * 1024;
     }

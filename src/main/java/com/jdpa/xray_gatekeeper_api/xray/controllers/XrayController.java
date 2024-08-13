@@ -1,7 +1,9 @@
 package com.jdpa.xray_gatekeeper_api.xray.controllers;
 
+import com.jdpa.xray_gatekeeper_api.helpers.RateLimitProtection;
 import com.jdpa.xray_gatekeeper_api.helpers.Validators;
 import com.jdpa.xray_gatekeeper_api.xray.dtos.AppResponse;
+import com.jdpa.xray_gatekeeper_api.xray.dtos.XrayAppFeaturesResponse;
 import com.jdpa.xray_gatekeeper_api.xray.dtos.XrayAppResponse;
 import com.jdpa.xray_gatekeeper_api.xray.models.XrayAuth;
 import com.jdpa.xray_gatekeeper_api.xray.services.XRayService;
@@ -36,6 +38,7 @@ public class XrayController {
                         .body(appResponse));
     }
 
+    @RateLimitProtection
     @PostMapping("/junit/multipart")
     public Mono<ResponseEntity<AppResponse<XrayAppResponse>>> junit(@RequestParam("results") MultipartFile results,
                                                                     @RequestParam("info") MultipartFile info){
@@ -54,5 +57,16 @@ public class XrayController {
                 .map(appResponse -> ResponseEntity
                         .status(appResponse.getStatCode())
                         .body(appResponse));
+    }
+
+    @PostMapping("/feature")
+    public Mono<ResponseEntity<AppResponse<XrayAppFeaturesResponse>>> projectKey(@RequestParam("file") MultipartFile file,
+                                                                                 @RequestParam("projectKey") String projectKey){
+        String token= Validators.extractBearerToken();
+        Mono<ResponseEntity<AppResponse<XrayAppFeaturesResponse>>> objResp =  _xrayService.PublishFeatureFileToXray(file,projectKey, token)
+                .map(appResponse -> ResponseEntity
+                        .status(appResponse.getStatCode())
+                        .body(appResponse));
+        return objResp;
     }
 }

@@ -3,6 +3,7 @@ package com.jdpa.xray_gatekeeper_api.xray.services;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jdpa.xray_gatekeeper_api.helpers.Validators;
+import com.jdpa.xray_gatekeeper_api.xray.dtos.XrayAppFeaturesResponse;
 import com.jdpa.xray_gatekeeper_api.xray.dtos.XrayAppResponse;
 import com.jdpa.xray_gatekeeper_api.xray.dtos.AppResponse;
 import com.jdpa.xray_gatekeeper_api.xray.models.XrayAuth;
@@ -20,6 +21,7 @@ import reactor.core.scheduler.Schedulers;
 @Service
 public class XRayService {
     private final WebClient webClient;
+    private final long FILE_SIZE = System.getenv("FILE_UPLOAD_SIZE") != null ? Integer.parseInt(System.getenv("FILE_UPLOAD_SIZE")) : 5;
 
     public XRayService(WebClient.Builder webClientBuilder) {
         this.webClient = webClientBuilder.baseUrl("https://xray.cloud.getxray.app/api/v2").build();
@@ -81,8 +83,8 @@ public class XRayService {
         if(!Validators.isXmlFile(results) || !Validators.isJsonFile(info)){
             return Mono.just(AppResponse.failed(null,"Results file must be an XML file and Info file JSON format", 400));
         }
-        if(results.getSize() > Validators.valueMegabytes(5) || info.getSize() > Validators.valueMegabytes(5)){
-            return Mono.just(AppResponse.failed(null,"File size upload must not exceed 5MB", 400));
+        if(results.getSize() > Validators.valueMegabytes(FILE_SIZE) || info.getSize() > Validators.valueMegabytes(FILE_SIZE)){
+            return Mono.just(AppResponse.failed(null,String.format("File size upload must not exceed %sMB",FILE_SIZE), 400));
         }
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
 
@@ -140,8 +142,8 @@ public class XRayService {
         if(!Validators.isJsonFile(results) || !Validators.isJsonFile(info)){
             return Mono.just(AppResponse.failed(null,"Both files 'results' and 'info' file must be JSON format", 400));
         }
-        if(results.getSize() > Validators.valueMegabytes(5) || info.getSize() > Validators.valueMegabytes(5)){
-            return Mono.just(AppResponse.failed(null,"File size upload must not exceed 5MB", 400));
+        if(results.getSize() > Validators.valueMegabytes(FILE_SIZE) || info.getSize() > Validators.valueMegabytes(FILE_SIZE)){
+            return Mono.just(AppResponse.failed(null,String.format("File size upload must not exceed %sMB",FILE_SIZE), 400));
         }
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
 
@@ -187,4 +189,68 @@ public class XRayService {
         }).subscribeOn(Schedulers.boundedElastic());
         return objResp;
     }
+
+    public Mono<AppResponse<XrayAppFeaturesResponse>> PublishFeatureFileToXray(MultipartFile file, String projectKey, String token){
+        if(token == null || token.isBlank()){
+            return Mono.just(AppResponse.failed(null, "Invalid token passed", 400));
+        }
+        Mono<AppResponse<XrayAppFeaturesResponse>> objResp;
+        if( file == null){
+            return Mono.just(AppResponse.failed(null, "BadRequest: file is null", 400));
+        }
+        if(file.getSize() > Validators.valueMegabytes(FILE_SIZE) || file.getSize() > Validators.valueMegabytes(FILE_SIZE)){
+            return Mono.just(AppResponse.failed(null,String.format("File size upload must not exceed %sMB",FILE_SIZE), 400));
+        }
+        if(Validators.isFeatureFile(file) ){
+            System.out.println("Feature file upload.");
+        }else if(Validators.isZipFile(file) ){
+            System.out.println("Zipped feature files upload.");
+        }else{
+            return Mono.just(AppResponse.failed(null,"File is not a feature or zipped features file.", 400));
+        }
+        
+
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+
+        builder.part("file", file.getResource())
+                .header("Content-Disposition", "form-data; name=file; filename=" + file.getOriginalFilename());
+        MultiValueMap<String, HttpEntity<?>> multipartBody = builder.build();
+
+        Mono<ResponseEntity<XrayAppFeaturesResponse>> respEntity = webClient.post()
+                .uri(String.format("/import/feature?projectKey=%s",projectKey))
+                .headers(httpHeaders -> {
+                    httpHeaders.setContentType(MediaType.MULTIPART_FORM_DATA);
+                    httpHeaders.setBearerAuth(token); // will automatically format the "Bearer " prefix
+                })
+                .body(BodyInserters.fromMultipartData(multipartBody))
+                .retrieve()
+                .toEntity(XrayAppFeaturesResponse.class);
+
+        objResp = respEntity.flatMap(resp->{
+            int statusCode = resp.getStatusCode().value();
+            XrayAppFeaturesResponse responseBody = resp.getBody();
+            if (statusCode == HttpStatus.OK.value()) {
+                    return Mono.just(AppResponse.success(responseBody, statusCode));
+            } else {
+                return Mono.just(AppResponse.failed(responseBody, "Non-200 status code: " + statusCode, statusCode));
+            }
+        }).onErrorResume(err-> {
+            if (err instanceof WebClientResponseException webClientResponseException) {
+                int statCode = webClientResponseException.getStatusCode().value();
+                String responseBody = webClientResponseException.getResponseBodyAsString();
+                ObjectMapper _mapper = new ObjectMapper();
+                try {
+                    XrayAppResponse errMessage = _mapper.readValue(responseBody, XrayAppResponse.class);
+                    responseBody = errMessage.getError();
+                } catch (JsonProcessingException ex) {
+                    System.out.println(ex.getMessage());
+                }
+                return Mono.just(AppResponse.failed(null, "Error: " + responseBody, statCode));
+            } else {
+                return Mono.just(AppResponse.failed(null, "Error: " + err.getMessage(), 500));
+            }
+        }).subscribeOn(Schedulers.boundedElastic());
+        return objResp;
+    }
+
 }
