@@ -100,9 +100,9 @@ public class XRayService {
         MultiValueMap<String, HttpEntity<?>> multipartBody = builder.build();
 
         GenericWebClient client = new GenericWebClient(webClient);
-        String xRayFeatureEndpoint = "/import/execution/junit/multipart";
+        String xRayJunitEndpoint = "/import/execution/junit/multipart";
 
-        Mono<AppResponse<XrayAppResponse>> respEntity = client.postMultipartRequest(xRayFeatureEndpoint,null,builder, XrayAppResponse.class, XrayAppResponse.class, token);
+        Mono<AppResponse<XrayAppResponse>> respEntity = client.postMultipartRequest(xRayJunitEndpoint,null,builder, XrayAppResponse.class, XrayAppResponse.class, token);
 
         objResp = respEntity.subscribeOn(Schedulers.boundedElastic());
         return objResp;
@@ -168,5 +168,4 @@ public class XRayService {
         objResp = respEntity.subscribeOn(Schedulers.boundedElastic());
         return objResp;
     }
-
 }
