@@ -36,6 +36,16 @@ public class AppResponse<T> {
         return appResponse;
     }
 
+    @Override
+    public String toString() {
+        return "AppResponse{" +
+                "result=" + result +
+                ", error='" + error + '\'' +
+                ", StatCode=" + StatCode +
+                ", isSuccess=" + isSuccess +
+                '}';
+    }
+
     public T getResult() {
         return result;
     }
