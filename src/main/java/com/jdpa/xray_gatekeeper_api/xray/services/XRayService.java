@@ -7,9 +7,13 @@ import com.jdpa.xray_gatekeeper_api.helpers.Validators;
 import com.jdpa.xray_gatekeeper_api.xray.dtos.XrayAppFeaturesResponse;
 import com.jdpa.xray_gatekeeper_api.xray.dtos.XrayAppResponse;
 import com.jdpa.xray_gatekeeper_api.xray.dtos.AppResponse;
+import com.jdpa.xray_gatekeeper_api.xray.models.XRayRequestLogs;
 import com.jdpa.xray_gatekeeper_api.xray.models.XrayAuth;
+import com.jdpa.xray_gatekeeper_api.xray.models.XRayRequestLogs.Status;
+import com.jdpa.xray_gatekeeper_api.xray.repository.XRayServiceRepository;
 import org.springframework.http.*;
 import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.util.MultiValueMap;
@@ -26,9 +30,11 @@ import java.util.Map;
 public class XRayService {
     private final WebClient webClient;
     private final long FILE_SIZE = System.getenv("FILE_UPLOAD_SIZE") != null ? Integer.parseInt(System.getenv("FILE_UPLOAD_SIZE")) : 5;
+    private final XRayServiceRepository _xrayServiceRepository;
 
-    public XRayService(WebClient.Builder webClientBuilder) {
+    public XRayService(WebClient.Builder webClientBuilder, XRayServiceRepository xrayServiceRepository) {
         this.webClient = webClientBuilder.baseUrl("https://xray.cloud.getxray.app/api/v2").build();
+        this._xrayServiceRepository = xrayServiceRepository;
     }
 
     public Mono<AppResponse<String>> AuthenticateXRay(XrayAuth request){
@@ -49,6 +55,7 @@ public class XRayService {
                 if (statusCode == HttpStatus.OK.value()) {
                     // Clean response to remove outer double quotation
                     String cleanedResponse = responseBody != null ? responseBody.replaceAll("^\"|\"$", "") : null;
+                    this.SaveRequestLog("--", "--", Status.COMPLETED, "/authentication");
                     return Mono.just(AppResponse.success(cleanedResponse, statusCode));
                 } else {
                     return Mono.just(AppResponse.failed(responseBody, "Non-200 status code: " + statusCode, statusCode));
@@ -168,4 +175,16 @@ public class XRayService {
         objResp = respEntity.subscribeOn(Schedulers.boundedElastic());
         return objResp;
     }
+
+
+//#region HELPERS
+    @Async
+    private void SaveRequestLog(String filePath, String fileNames, XRayRequestLogs.Status status, String operation){
+        XRayRequestLogs newObj = new XRayRequestLogs().AddNew(filePath, fileNames, status, operation);
+        _xrayServiceRepository.saveAndFlush(newObj);
+        System.out.println("Operation: "+ operation);
+    }
+//#endregion
+
+
 }

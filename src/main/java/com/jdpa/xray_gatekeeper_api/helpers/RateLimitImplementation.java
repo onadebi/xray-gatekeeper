@@ -1,5 +1,6 @@
 package com.jdpa.xray_gatekeeper_api.helpers;
 
+import com.jdpa.xray_gatekeeper_api.configurations.AppConfig;
 import com.jdpa.xray_gatekeeper_api.xray.dtos.AppResponse;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;

@@ -49,6 +49,7 @@ dependencies {
 	testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
 	testImplementation 'org.mockito:mockito-core:3.11.2'
 	implementation 'org.apache.commons:commons-csv:1.9.0'
+	implementation 'org.mariadb.jdbc:mariadb-java-client:3.3.3'
 }
 
 

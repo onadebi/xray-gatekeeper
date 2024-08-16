@@ -1,4 +1,4 @@
-package com.jdpa.xray_gatekeeper_api.helpers;
+package com.jdpa.xray_gatekeeper_api.configurations;
 
 public class AppConfig {
     public static final int DEFAULT_RATE_LIMIT =  System.getenv("RATE_LIMIT") != null  ?  Integer.parseInt(System.getenv("RATE_LIMIT")) : 6;
