@@ -38,6 +38,7 @@ dependencies {
 
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-amqp'
 
 	implementation 'app.getxray:xray-maven-plugin:0.7.6'
 	implementation 'org.apache.maven:maven-plugin-api:3.9.8'

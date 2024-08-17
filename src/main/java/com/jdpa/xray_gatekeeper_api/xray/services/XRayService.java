@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jdpa.xray_gatekeeper_api.helpers.GenericWebClient;
 import com.jdpa.xray_gatekeeper_api.helpers.Validators;
+import com.jdpa.xray_gatekeeper_api.messageQueue.rabbitmq.models.MessageQueueData;
+import com.jdpa.xray_gatekeeper_api.messageQueue.rabbitmq.services.RabbitMqSenderService;
 import com.jdpa.xray_gatekeeper_api.xray.dtos.XrayAppFeaturesResponse;
 import com.jdpa.xray_gatekeeper_api.xray.dtos.XrayAppResponse;
 import com.jdpa.xray_gatekeeper_api.xray.dtos.AppResponse;
@@ -23,6 +25,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,10 +34,14 @@ public class XRayService {
     private final WebClient webClient;
     private final long FILE_SIZE = System.getenv("FILE_UPLOAD_SIZE") != null ? Integer.parseInt(System.getenv("FILE_UPLOAD_SIZE")) : 5;
     private final XRayServiceRepository _xrayServiceRepository;
+    private final RabbitMqSenderService _rabbitMqService;
 
-    public XRayService(WebClient.Builder webClientBuilder, XRayServiceRepository xrayServiceRepository) {
+
+    public XRayService(WebClient.Builder webClientBuilder, XRayServiceRepository xrayServiceRepository
+    , RabbitMqSenderService rabbitMqService) {
         this.webClient = webClientBuilder.baseUrl("https://xray.cloud.getxray.app/api/v2").build();
         this._xrayServiceRepository = xrayServiceRepository;
+        this._rabbitMqService = rabbitMqService;
     }
 
     public Mono<AppResponse<String>> AuthenticateXRay(XrayAuth request){
@@ -103,6 +110,8 @@ public class XRayService {
                 .header("Content-Disposition", "form-data; name=results; filename=" + results.getOriginalFilename());
         builder.part("info", info.getResource())
                 .header("Content-Disposition", "form-data; name=info; filename=" + info.getOriginalFilename());
+        _rabbitMqService.sendMessage(new MessageQueueData(token,"Test Data", Validators.getCurrentMethodName()).toString());
+
         // Create the MultiValueMap for the body
         MultiValueMap<String, HttpEntity<?>> multipartBody = builder.build();
 
@@ -179,7 +188,7 @@ public class XRayService {
 
 //#region HELPERS
     @Async
-    private void SaveRequestLog(String filePath, String fileNames, XRayRequestLogs.Status status, String operation){
+    protected void SaveRequestLog(String filePath, String fileNames, XRayRequestLogs.Status status, String operation){
         XRayRequestLogs newObj = new XRayRequestLogs().AddNew(filePath, fileNames, status, operation);
         _xrayServiceRepository.saveAndFlush(newObj);
         System.out.println("Operation: "+ operation);

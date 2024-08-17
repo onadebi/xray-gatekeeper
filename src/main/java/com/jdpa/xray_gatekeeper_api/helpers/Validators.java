@@ -51,4 +51,10 @@ public class Validators {
         }
         return null;
     }
+
+    public static String getCurrentMethodName() {
+        // Stack trace at index 2 gives the method that called this helper method
+        return Thread.currentThread().getStackTrace()[2].getMethodName();
+    }
+
 }

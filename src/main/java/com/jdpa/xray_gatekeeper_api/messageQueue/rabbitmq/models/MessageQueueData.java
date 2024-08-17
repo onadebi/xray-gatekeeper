@@ -10,12 +10,17 @@ import lombok.Setter;
 
 @Setter
 @Getter
-@AllArgsConstructor
 @NoArgsConstructor
-public class MessageData {
+public class MessageQueueData {
     private String token;
     private String operation;
     private String data;
+
+    public MessageQueueData(String token, String data, String operation) {
+        this.data = data;
+        this.operation = operation;
+        this.token = token;
+    }
 
     @Override
     public String toString() {
