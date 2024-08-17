@@ -43,6 +43,7 @@ public class RabbitMqConfig {
         SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
         container.setQueueNames(QUEUE_NAME);
+//      container.setAcknowledgeMode(AcknowledgeMode.MANUAL); //SET Acknowledge mode to be manual
         container.setMessageListener(listenerAdapter);
         return container;
     }

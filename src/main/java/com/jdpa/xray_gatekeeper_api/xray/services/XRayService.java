@@ -110,7 +110,7 @@ public class XRayService {
                 .header("Content-Disposition", "form-data; name=results; filename=" + results.getOriginalFilename());
         builder.part("info", info.getResource())
                 .header("Content-Disposition", "form-data; name=info; filename=" + info.getOriginalFilename());
-        _rabbitMqService.sendMessage(new MessageQueueData(token,"Test Data", Validators.getCurrentMethodName()).toString());
+        _rabbitMqService.sendMessage(new MessageQueueData(token,"rabbitmq test Data", Validators.getCurrentMethodName()).toString());
 
         // Create the MultiValueMap for the body
         MultiValueMap<String, HttpEntity<?>> multipartBody = builder.build();
