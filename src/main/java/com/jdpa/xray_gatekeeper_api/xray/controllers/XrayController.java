@@ -51,7 +51,7 @@ public class XrayController {
     }
 
     @PostMapping("/cucumber/multipart")
-    public Mono<ResponseEntity<AppResponse<XrayAppResponse>>> cucumber(@RequestParam("results") MultipartFile results,
+    public Mono<ResponseEntity<AppResponse<String>>> cucumber(@RequestParam("results") MultipartFile results,
                                                                     @RequestParam("info") MultipartFile info){
         String token= Validators.extractBearerToken();
         return _xrayService.PublishCucumberToXray(results,info, token)

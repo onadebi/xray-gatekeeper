@@ -47,6 +47,9 @@ public class XRayRequestLogs {
     @Column(name = "response", columnDefinition = "TEXT")
     private String response;
 
+    @Column(name = "error", columnDefinition = "TEXT", nullable = true)
+    private String error;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -61,7 +64,8 @@ public class XRayRequestLogs {
     public enum Status {
         PENDING,
         CANCELED,
-        COMPLETED
+        COMPLETED,
+        COMPLETED_WITH_ERROR,
     }
 
     public XRayRequestLogs AddNew(String filePath, String fileNames, Status status,String operation, String data) {
