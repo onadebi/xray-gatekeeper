@@ -61,10 +61,10 @@ public class XrayController {
     }
 
     @PostMapping("/feature")
-    public Mono<ResponseEntity<AppResponse<XrayAppFeaturesResponse>>> projectKey(@RequestParam("file") MultipartFile file,
+    public Mono<ResponseEntity<AppResponse<String>>> projectKey(@RequestParam("file") MultipartFile file,
                                                                                  @RequestParam("projectKey") String projectKey){
         String token= Validators.extractBearerToken();
-        Mono<ResponseEntity<AppResponse<XrayAppFeaturesResponse>>> objResp =  _xrayService.PublishFeatureFileToXray(file,projectKey, token)
+        Mono<ResponseEntity<AppResponse<String>>> objResp =  _xrayService.PublishFeatureFileToXray(file,projectKey, token)
                 .map(appResponse -> ResponseEntity
                         .status(appResponse.getStatCode())
                         .body(appResponse));

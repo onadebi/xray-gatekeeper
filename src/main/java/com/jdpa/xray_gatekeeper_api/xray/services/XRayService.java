@@ -2,17 +2,19 @@ package com.jdpa.xray_gatekeeper_api.xray.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jdpa.xray_gatekeeper_api.helpers.FileUtils;
 import com.jdpa.xray_gatekeeper_api.helpers.GenericWebClient;
 import com.jdpa.xray_gatekeeper_api.helpers.Validators;
 import com.jdpa.xray_gatekeeper_api.messageQueue.rabbitmq.models.MessageQueueData;
 import com.jdpa.xray_gatekeeper_api.messageQueue.rabbitmq.services.RabbitMqSenderService;
-import com.jdpa.xray_gatekeeper_api.xray.dtos.XrayAppFeaturesResponse;
-import com.jdpa.xray_gatekeeper_api.xray.dtos.XrayAppResponse;
-import com.jdpa.xray_gatekeeper_api.xray.dtos.AppResponse;
+import com.jdpa.xray_gatekeeper_api.xray.dtos.*;
+import com.jdpa.xray_gatekeeper_api.xray.models.ActivityLog;
 import com.jdpa.xray_gatekeeper_api.xray.models.XRayRequestLogs;
 import com.jdpa.xray_gatekeeper_api.xray.models.XrayAuth;
 import com.jdpa.xray_gatekeeper_api.xray.models.XRayRequestLogs.Status;
+import com.jdpa.xray_gatekeeper_api.xray.repository.ActivityLogRepository;
 import com.jdpa.xray_gatekeeper_api.xray.repository.XRayServiceRepository;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.*;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.scheduling.annotation.Async;
@@ -25,23 +27,32 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
 
 @Service
 public class XRayService {
     private final WebClient webClient;
     private final long FILE_SIZE = System.getenv("FILE_UPLOAD_SIZE") != null ? Integer.parseInt(System.getenv("FILE_UPLOAD_SIZE")) : 5;
+    private final String UPLOAD_PATH = "Uploads";
     private final XRayServiceRepository _xrayServiceRepository;
     private final RabbitMqSenderService _rabbitMqService;
+    private final ActivityLogRepository _activityLogRepository;
 
 
     public XRayService(WebClient.Builder webClientBuilder, XRayServiceRepository xrayServiceRepository
-    , RabbitMqSenderService rabbitMqService) {
+    , RabbitMqSenderService rabbitMqService
+    , ActivityLogRepository activityLogRepository) {
         this.webClient = webClientBuilder.baseUrl("https://xray.cloud.getxray.app/api/v2").build();
         this._xrayServiceRepository = xrayServiceRepository;
         this._rabbitMqService = rabbitMqService;
+        this._activityLogRepository = activityLogRepository;
     }
 
     public Mono<AppResponse<String>> AuthenticateXRay(XrayAuth request){
@@ -62,7 +73,7 @@ public class XRayService {
                 if (statusCode == HttpStatus.OK.value()) {
                     // Clean response to remove outer double quotation
                     String cleanedResponse = responseBody != null ? responseBody.replaceAll("^\"|\"$", "") : null;
-                    this.SaveRequestLog("--", "--", Status.COMPLETED, "/authentication");
+                    this.SaveRequestLog("--", "--", Status.COMPLETED, OperationEnum.AuthenticateXRay, "");
                     return Mono.just(AppResponse.success(cleanedResponse, statusCode));
                 } else {
                     return Mono.just(AppResponse.failed(responseBody, "Non-200 status code: " + statusCode, statusCode));
@@ -104,12 +115,15 @@ public class XRayService {
         if(results.getSize() > Validators.valueMegabytes(FILE_SIZE) || info.getSize() > Validators.valueMegabytes(FILE_SIZE)){
             return Mono.just(AppResponse.failed(null,String.format("File size upload must not exceed %sMB",FILE_SIZE), 400));
         }
+
+
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
 
         builder.part("results", results.getResource())
                 .header("Content-Disposition", "form-data; name=results; filename=" + results.getOriginalFilename());
         builder.part("info", info.getResource())
                 .header("Content-Disposition", "form-data; name=info; filename=" + info.getOriginalFilename());
+
         _rabbitMqService.sendMessage(new MessageQueueData(token,"rabbitmq test Data", Validators.getCurrentMethodName()).toString());
 
         // Create the MultiValueMap for the body
@@ -153,11 +167,11 @@ public class XRayService {
         return objResp;
     }
 
-    public Mono<AppResponse<XrayAppFeaturesResponse>> PublishFeatureFileToXray(MultipartFile file, String projectKey, String token){
+    public Mono<AppResponse<String>> PublishFeatureFileToXray(MultipartFile file, String projectKey, String token){
         if(token == null || token.isBlank()){
             return Mono.just(AppResponse.failed(null, "Invalid token passed", 400));
         }
-        Mono<AppResponse<XrayAppFeaturesResponse>> objResp;
+        Mono<AppResponse<String>> objResp = Mono.just(AppResponse.failed(null, "Not Modified", 304));
         if( file == null){
             return Mono.just(AppResponse.failed(null, "BadRequest: file is null", 400));
         }
@@ -172,26 +186,191 @@ public class XRayService {
             return Mono.just(AppResponse.failed(null,"File is not a feature or zipped features file.", 400));
         }
 
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("file", file.getResource())
-                .header("Content-Disposition", "form-data; name=file; filename=" + file.getOriginalFilename());
-
-        GenericWebClient client = new GenericWebClient(webClient);
-        String xRayFeatureEndpoint = String.format("/import/feature?projectKey=%s",projectKey);
-
-        Mono<AppResponse<XrayAppFeaturesResponse>> respEntity = client.postMultipartRequest(xRayFeatureEndpoint,null,builder, XrayAppFeaturesResponse.class, XrayAppResponse.class, token);
-
-        objResp = respEntity.subscribeOn(Schedulers.boundedElastic());
+        List<MultipartFile> renamedFiles = FileUtils.renameFilesWithUUID(new MultipartFile[]{file});
+        List<MultipartFile> files = new ArrayList<>(renamedFiles);
+        // Create a map and associate the list of files with a key (e.g., "file")
+        Map<String, List<MultipartFile>> fileObjData = new HashMap<>();
+        fileObjData.put(token, files);  // Adding the list of files to the map with a key "file"
+        
+        FilesTransferData filesData = new FilesTransferData().AddNew(token, fileObjData, OperationEnum.PublishFeatureFileToXray.name(),String.format("/import/feature?projectKey=%s",projectKey), null);
+        String filesDataJson = filesData.toJson();
+        long dbId = this.SaveRequestLog("--", "--", Status.COMPLETED, OperationEnum.PublishFeatureFileToXray, filesDataJson);
+        if(dbId > 0){
+            filesData.setId(dbId);
+            this.SaveFiles(filesData.getFilesData());
+            filesDataJson = filesData.toJson();
+            if(!filesDataJson.contains("ERROR")){
+                _rabbitMqService.sendMessage(filesData.toJson());
+                objResp = Mono.just(AppResponse.success("Successfully queued.", 201));
+            }else{
+                objResp = Mono.just(AppResponse.failed(null,"Failed to queue request: "+filesDataJson, 500));
+            }
+        }else{
+            objResp = Mono.just(AppResponse.failed(null,"Failed to queue request.", 400));
+        }
+//        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+//        builder.part("file", file.getResource())
+//                .header("Content-Disposition", "form-data; name=file; filename=" + file.getOriginalFilename());
+//
+//        GenericWebClient client = new GenericWebClient(webClient);
+//        String xRayFeatureEndpoint = String.format("/import/feature?projectKey=%s",projectKey);
+//
+//        Mono<AppResponse<XrayAppFeaturesResponse>> respEntity = client.postMultipartRequest(xRayFeatureEndpoint,null,builder, XrayAppFeaturesResponse.class, XrayAppResponse.class, token);
+//
+//        objResp = respEntity.subscribeOn(Schedulers.boundedElastic());
         return objResp;
+    }
+
+    public Mono<Boolean> XrayPublishImplementation(FilesTransferData data){
+        boolean outcome = false;
+        Mono<Boolean> outResp = Mono.just(false);
+        Mono<AppResponse<XrayAppFeaturesResponse>> objResp = Mono.just(AppResponse.failed(null, "NO CHANGES", 304));
+        try {
+            if (data != null) {
+                MultipartBodyBuilder builder = new MultipartBodyBuilder();
+                if(data.getFileNames().length > 0){
+                    Path filesDirectory = Paths.get(UPLOAD_PATH);
+                    for (String fileName : data.getFileNames()) {
+                        Path filesPath = filesDirectory.resolve(fileName);
+                        if (Files.exists(filesPath)) {
+                            try{
+                                // Create an InputStreamResource from the file path
+                                InputStreamResource resource = new InputStreamResource(Files.newInputStream(filesPath));
+                                if (data.getOperation().equals(OperationEnum.PublishFeatureFileToXray.name())) {
+                                    builder.part("file", resource)
+                                            .header("Content-Disposition", "form-data; name=file; filename=" + fileName);
+                                }
+                            }catch (Exception e){
+                                CompletableFuture.runAsync(() -> {
+                                    ActivityLog activityLog = new ActivityLog().AddNew("XRAY_PUBLISH_REPORT", "Error reading file from disk: " + data.getId() + " - " + e.getMessage());
+                                    _activityLogRepository.saveAndFlush(activityLog);
+                                }, Executors.newCachedThreadPool());
+                            }
+                        }else {
+                            CompletableFuture.runAsync(() -> {
+                            ActivityLog activityLog = new ActivityLog().AddNew("XRAY_PUBLISH_REPORT", String.format("File upload is null for id %s: | %s", data.getId(), fileName));
+                            _activityLogRepository.saveAndFlush(activityLog);
+                            }, Executors.newCachedThreadPool());
+                        }
+                    }
+                }
+                //#region Obsolete
+//                if (data.getFilesData() != null) {
+//                    Path filesDirectory = Paths.get(UPLOAD_PATH);
+//                    for (Map.Entry<String, List<MultipartFile>> entry : data.getFilesData().entrySet()) {
+//                        for (MultipartFile file : entry.getValue()) {
+//                            if (file != null && !file.isEmpty()) {
+//                                Path filesPath = filesDirectory.resolve(file.getOriginalFilename());
+//                                if (!Files.exists(filesPath)) {
+//                                    try {
+//                                        // Create an InputStreamResource from the file path
+//                                        InputStreamResource resource = new InputStreamResource(Files.newInputStream(filesPath));
+//                                        if (data.getOperation().equals(OperationEnum.PublishFeatureFileToXray.name())) {
+//                                            builder.part("file", resource)
+//                                                    .header("Content-Disposition", "form-data; name=file; filename=" + file.getOriginalFilename());
+//                                        }
+//                                    }catch (Exception e){
+//                                        // Handle the exception appropriately
+//                                        ActivityLog activityLog = new ActivityLog().AddNew("XRAY_PUBLISH_REPORT", "Error reading file from disk: " + data.getId() + " - " + e.getMessage());
+//                                        _activityLogRepository.saveAndFlush(activityLog);
+//                                    }
+//                                }
+//                            } else {
+//                                ActivityLog activityLog = new ActivityLog().AddNew("XRAY_PUBLISH_REPORT", "File upload is null for: " + entry.getKey());
+//                                _activityLogRepository.saveAndFlush(activityLog);
+//                            }
+//                        }
+//                    }
+//
+//                }
+                //#endregion
+                GenericWebClient client = new GenericWebClient(webClient);
+                String xRayFeatureEndpoint = String.format(data.getUrl());
+
+                Mono<AppResponse<XrayAppFeaturesResponse>> respEntity = client.postMultipartRequest(xRayFeatureEndpoint, null, builder, XrayAppFeaturesResponse.class, XrayAppResponse.class, data.getToken());
+                objResp = respEntity.subscribeOn(Schedulers.boundedElastic());
+                outResp = objResp.map(AppResponse->{
+                    String error = AppResponse.getError();
+                    XrayAppFeaturesResponse body = AppResponse.getResult();
+                    if (body != null) {
+                        if(body.getErrors().length > 0){
+                            this.UpdateRequestLog(data.getId(), body.getErrors()[0]);
+                        }else{
+                            this.UpdateRequestLog(data.getId(), body.getUpdatedOrCreatedTests()[0].toString());
+                        }
+                    }
+//                    if(AppResponse.isSuccess()){
+//                        this.UpdateRequestLog(data.getId(), AppResponse.getResult().toString());
+//                    }else{
+//                        this.UpdateRequestLog(data.getId(), AppResponse.getError());
+//                    }
+
+                    return AppResponse.isSuccess();
+                });
+            }
+        }catch(Exception e){
+            CompletableFuture.runAsync(() -> {
+                ActivityLog activityLog = new ActivityLog().AddNew("REPORT_PUBLISH_ERROR", String.format("Failed to publish report for id: %s | %s", data.getId(), e.getMessage()));
+                _activityLogRepository.saveAndFlush(activityLog);
+            }, Executors.newCachedThreadPool());
+        }
+        return outResp;
     }
 
 
 //#region HELPERS
     @Async
-    protected void SaveRequestLog(String filePath, String fileNames, XRayRequestLogs.Status status, String operation){
-        XRayRequestLogs newObj = new XRayRequestLogs().AddNew(filePath, fileNames, status, operation);
+    protected long SaveRequestLog(String filePath, String fileNames, XRayRequestLogs.Status status, OperationEnum operation, String data){
+        XRayRequestLogs newObj = new XRayRequestLogs().AddNew(filePath, fileNames, status, operation.name(),data);
         _xrayServiceRepository.saveAndFlush(newObj);
-        System.out.println("Operation: "+ operation);
+        System.out.printf("Operation: %s | ID: %s%n", operation, newObj.getId());
+        return  newObj.getId();
+    }
+
+    @Async
+    protected void UpdateRequestLog(long id, String response){
+        try {
+            Optional<XRayRequestLogs> optionalLog = _xrayServiceRepository.findById(id);
+            if (optionalLog.isPresent()) {
+                XRayRequestLogs log = optionalLog.get();
+                log.setResponse(response);
+                _xrayServiceRepository.save(log);
+            }
+        }catch(Exception ex){
+            //TODO: Log exception activity
+            System.out.println("Update request log failed. Error: " + ex.getMessage());
+        }
+    }
+
+    @Async
+    protected void SaveFiles(Map<String, List<MultipartFile>> files){
+        // Define the upload directory
+        Path uploadPath = Paths.get(UPLOAD_PATH);
+        try {
+            // Create the "Uploads" directory if it does not exist
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+            // Loop through the map and save each file in the "Uploads" folder
+            for (Map.Entry<String, List<MultipartFile>> entry : files.entrySet()) {
+                for (MultipartFile file : entry.getValue()) {
+                    if (file != null && !file.isEmpty()) {
+                        // Resolve the path for each file
+                        Path filePath = uploadPath.resolve(Objects.requireNonNull(file.getOriginalFilename()));
+
+                        // Save the file to the directory
+                        Files.write(filePath, file.getBytes());
+                    }else{
+                        ActivityLog activityLog = new ActivityLog().AddNew("FILE_UPLOAD_EMPTY","File upload is null for: "+entry.getKey());
+                        _activityLogRepository.saveAndFlush(activityLog);
+                    }
+                }
+            }
+
+        } catch (IOException e) {
+            ActivityLog activityLog = new ActivityLog().AddNew("FILE_UPLOAD_ERROR","File upload encountered an error: "+e.getMessage());
+            _activityLogRepository.saveAndFlush(activityLog);
+        }
     }
 //#endregion
 

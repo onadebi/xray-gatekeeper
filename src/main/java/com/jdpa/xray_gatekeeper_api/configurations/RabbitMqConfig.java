@@ -39,17 +39,17 @@ public class RabbitMqConfig {
 
     @Bean
     public SimpleMessageListenerContainer container(ConnectionFactory connectionFactory,
-                                                    MessageListenerAdapter listenerAdapter) {
+                                                    Receiver receiver) {
         SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
         container.setConnectionFactory(connectionFactory);
         container.setQueueNames(QUEUE_NAME);
-//      container.setAcknowledgeMode(AcknowledgeMode.MANUAL); //SET Acknowledge mode to be manual
-        container.setMessageListener(listenerAdapter);
+        container.setAcknowledgeMode(AcknowledgeMode.MANUAL); //SET Acknowledge mode to be manual
+        container.setMessageListener(receiver);
         return container;
     }
 
-    @Bean
-    public MessageListenerAdapter listenerAdapter(Receiver receiver) {
-        return new MessageListenerAdapter(receiver, "receiveMessage");
-    }
+//    @Bean
+//    public MessageListenerAdapter listenerAdapter(Receiver receiver) {
+//        return new MessageListenerAdapter(receiver, "receiveMessage");
+//    }
 }

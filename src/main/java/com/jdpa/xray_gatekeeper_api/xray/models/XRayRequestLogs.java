@@ -22,6 +22,9 @@ public class XRayRequestLogs {
     @Column(name = "file_names", columnDefinition = "TEXT")
     private String fileNames;
 
+    @Column(name = "data", columnDefinition = "TEXT")
+    private String data;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -61,12 +64,13 @@ public class XRayRequestLogs {
         COMPLETED
     }
 
-    public XRayRequestLogs AddNew(String filePath, String fileNames, Status status,String operation) {
+    public XRayRequestLogs AddNew(String filePath, String fileNames, Status status,String operation, String data) {
         XRayRequestLogs newLog = new XRayRequestLogs();
         newLog.setFilePath(filePath);
         newLog.setFileNames(fileNames);
         newLog.setStatus(status);
         newLog.setOperation(operation);
+        newLog.setData(data);
         return newLog;
     }
 }
