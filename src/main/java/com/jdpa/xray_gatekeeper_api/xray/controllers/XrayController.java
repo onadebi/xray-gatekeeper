@@ -41,7 +41,7 @@ public class XrayController {
 
     @RateLimitProtection(rateLimit = 10, rateDuration = 180000)
     @PostMapping("/junit/multipart")
-    public Mono<ResponseEntity<AppResponse<XrayAppResponse>>> junit(@RequestParam("results") MultipartFile results,
+    public Mono<ResponseEntity<AppResponse<String>>> junit(@RequestParam("results") MultipartFile results,
                                                                     @RequestParam("info") MultipartFile info){
         String token= Validators.extractBearerToken();
         return _xrayService.PublishJunitToXray(results,info, token)

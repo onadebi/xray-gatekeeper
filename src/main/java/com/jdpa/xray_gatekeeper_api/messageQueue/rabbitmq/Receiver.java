@@ -11,34 +11,9 @@ import org.springframework.stereotype.Component;
 public class Receiver implements ChannelAwareMessageListener {
 
     private final XRayService _xRayService;
-
     public Receiver(XRayService xRayService) {
         this._xRayService = xRayService;
     }
-
-//    public void receiveMessage(String message) {
-//        //TODO: IMPLEMENT RATE LIMITATION HERE with ACTIONs to be TAKEN on DATA
-//        //TODO: possibly implement function in RabbitMqSenderService/XRayService and Inject here
-//        try {
-//            FilesTransferData data = new FilesTransferData().fromJson(message);
-//            if(data != null){
-//                _xRayService.XrayPublishImplementation(data).subscribe( result ->{
-//                    if(result){
-//                        System.out.println("Publish completed");
-//                        System.out.println("Received <" + message + ">");
-//                    }else{
-//                        System.out.println("Publish failed");
-//                    }
-//                });
-//            }else{
-//                //TODO: Log failed to database
-//                System.out.println("Publish failed");
-//            }
-//
-//        }catch (Exception e) {
-//            System.out.println("Consumer Error: <" + e.getMessage() + ">");
-//        }
-//    }
 
     //#region Overrides
     @Override
@@ -49,7 +24,7 @@ public class Receiver implements ChannelAwareMessageListener {
             FilesTransferData data = new FilesTransferData().fromJson(messageBody);
             if (data != null) {
                 _xRayService.XrayPublishImplementation(data).subscribe(result -> {
-                    if (result) {
+                    if (result.isSuccess()) {
                         System.out.println("Report Publish completed!");
 
                         // Acknowledge the message upon successful processing
@@ -60,13 +35,13 @@ public class Receiver implements ChannelAwareMessageListener {
                             System.out.println("Acknowledgment error: " + e.getMessage());
                         }
                     } else {
-                        System.out.println("Publish failed");
+                        System.out.println("Publish failed: "+result.getError());
                         // Optionally, you can reject or requeue the message here
                     }
                 });
             } else {
                 //TODO: Log failed to database
-                System.out.println("Publish failed");
+                System.out.println("Unable to parse data from message <" + messageBody + ">");
                 // Optionally, you can reject or requeue the message here
             }
         } catch (Exception e) {

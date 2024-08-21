@@ -101,11 +101,11 @@ public class XRayService {
         return objResp;
     }
 
-    public Mono<AppResponse<XrayAppResponse>> PublishJunitToXray(MultipartFile results, MultipartFile info, String token){
+    public Mono<AppResponse<String>> PublishJunitToXray(MultipartFile results, MultipartFile info, String token){
         if(token == null || token.isBlank()){
             return Mono.just(AppResponse.failed(null, "Invalid token passed", 400));
         }
-        Mono<AppResponse<XrayAppResponse>> objResp = Mono.just(AppResponse.failed(null,"",400));
+        Mono<AppResponse<String>> objResp = Mono.just(AppResponse.failed(null,"",400));
         if(results == null || info == null){
             return Mono.just(AppResponse.failed(null, "BadRequest: results or info file is null", 400));
         }
@@ -116,25 +116,57 @@ public class XRayService {
             return Mono.just(AppResponse.failed(null,String.format("File size upload must not exceed %sMB",FILE_SIZE), 400));
         }
 
+        //#region Async replacement
+        List<MultipartFile> renamedFiles = FileUtils.renameFilesWithUUID(new MultipartFile[]{results, info});
+        List<MultipartFile> files = new ArrayList<>(renamedFiles);
 
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        Map<String, List<MultipartFile>> fileObjData = new HashMap<>();
+        fileObjData.put(token, files);
 
-        builder.part("results", results.getResource())
-                .header("Content-Disposition", "form-data; name=results; filename=" + results.getOriginalFilename());
-        builder.part("info", info.getResource())
-                .header("Content-Disposition", "form-data; name=info; filename=" + info.getOriginalFilename());
+        FilesTransferData filesData = new FilesTransferData().AddNew(token, fileObjData, OperationEnum.PublishJunitToXray.name(),"/import/execution/junit/multipart", null);
 
-        _rabbitMqService.sendMessage(new MessageQueueData(token,"rabbitmq test Data", Validators.getCurrentMethodName()).toString());
+        List<String> allFileNames = new ArrayList<>();
+        allFileNames.add(String.format("results:%s",renamedFiles.get(0).getOriginalFilename()));
+        allFileNames.add(String.format("info:%s",renamedFiles.get(1).getOriginalFilename()));
+        filesData.setFileNames(allFileNames.toArray(String[]::new));
 
-        // Create the MultiValueMap for the body
-        MultiValueMap<String, HttpEntity<?>> multipartBody = builder.build();
+        String filesDataJson = filesData.toJson();
+        long dbId = this.SaveRequestLog("--", "--", Status.PENDING, OperationEnum.PublishJunitToXray, filesDataJson);
+        if(dbId > 0){
+            filesData.setId(dbId);
+            this.SaveFiles(filesData.getFilesData());
+            filesDataJson = filesData.toJson();
+            if(!filesDataJson.contains("ERROR")){
+                _rabbitMqService.sendMessage(filesData.toJson());
+                objResp = Mono.just(AppResponse.success("Successfully queued.", 201));
+            }else{
+                objResp = Mono.just(AppResponse.failed(null,"Failed to queue request: "+filesDataJson, 500));
+            }
+        }else{
+            objResp = Mono.just(AppResponse.failed(null,"Failed to queue request.", 400));
+        }
+        //#endregion
+        //#region to be obsoleted
+//        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+//
+//        builder.part("results", results.getResource())
+//                .header("Content-Disposition", "form-data; name=results; filename=" + results.getOriginalFilename());
+//        builder.part("info", info.getResource())
+//                .header("Content-Disposition", "form-data; name=info; filename=" + info.getOriginalFilename());
+//
+//        _rabbitMqService.sendMessage(new MessageQueueData(token,"rabbitmq test Data", Validators.getCurrentMethodName()).toString());
+//
+//        // Create the MultiValueMap for the body
+//        MultiValueMap<String, HttpEntity<?>> multipartBody = builder.build();
+//
+//        GenericWebClient client = new GenericWebClient(webClient);
+//        String xRayJunitEndpoint = "/import/execution/junit/multipart";
+//
+//        Mono<AppResponse<XrayAppResponse>> respEntity = client.postMultipartRequest(xRayJunitEndpoint,null,builder, XrayAppResponse.class, XrayAppResponse.class, token);
+//
+//        objResp = respEntity.subscribeOn(Schedulers.boundedElastic());
+        //#endregion
 
-        GenericWebClient client = new GenericWebClient(webClient);
-        String xRayJunitEndpoint = "/import/execution/junit/multipart";
-
-        Mono<AppResponse<XrayAppResponse>> respEntity = client.postMultipartRequest(xRayJunitEndpoint,null,builder, XrayAppResponse.class, XrayAppResponse.class, token);
-
-        objResp = respEntity.subscribeOn(Schedulers.boundedElastic());
         return objResp;
     }
 
@@ -235,10 +267,8 @@ public class XRayService {
         return objResp;
     }
 
-    public Mono<Boolean> XrayPublishImplementation(FilesTransferData data){
-        boolean outcome = false;
-        Mono<Boolean> outResp = Mono.just(false);
-//        Mono<AppResponse<XrayAppFeaturesResponse>> objResp = Mono.just(AppResponse.failed(null, "NO CHANGES", 304));
+    public Mono<AppResponse<Boolean>> XrayPublishImplementation(FilesTransferData data){
+        Mono<AppResponse<Boolean>> httpResp = Mono.just(AppResponse.failed(false, "NO CHANGES", 304));
         try {
             if (data != null) {
                 MultipartBodyBuilder builder = new MultipartBodyBuilder();
@@ -253,18 +283,8 @@ public class XRayService {
                             try{
                                 // Create an InputStreamResource from the file path
                                 InputStreamResource resource = new InputStreamResource(Files.newInputStream(filesPath));
-//                                if (data.getOperation().equals(OperationEnum.PublishFeatureFileToXray.name())) {
                                     builder.part(fileSubmissionName, resource)
                                             .header("Content-Disposition", String.format("form-data; name=%s; filename=%s",fileSubmissionName ,fileName));
-//                                }
-//                                else if (data.getOperation().equals(OperationEnum.PublishCucumberToXray.name())) {
-//                                    builder.part("results", results.getResource())
-//                                            .header("Content-Disposition", "form-data; name=results; filename=" + results.getOriginalFilename());
-//                                    builder.part("info", info.getResource())
-//                                            .header("Content-Disposition", "form-data; name=info; filename=" + info.getOriginalFilename());
-//                                }else{
-//
-//                                }
                             }catch (Exception e){
                                 CompletableFuture.runAsync(() -> {
                                     ActivityLog activityLog = new ActivityLog().AddNew("XRAY_PUBLISH_REPORT", "Error reading file from disk: " + data.getId() + " - " + e.getMessage());
@@ -273,50 +293,27 @@ public class XRayService {
                             }
                         }else {
                             CompletableFuture.runAsync(() -> {
-                            ActivityLog activityLog = new ActivityLog().AddNew("XRAY_PUBLISH_REPORT", String.format("File upload is null for id %s: | %s", data.getId(), fileName));
+                            ActivityLog activityLog = new ActivityLog().AddNew("FILE_NOT_FOUND", String.format("File upload not found for id %s: |Filename: %s |Operation: %s", data.getId(), fileName, data.getOperation()));
                             _activityLogRepository.saveAndFlush(activityLog);
                             }, Executors.newCachedThreadPool());
                         }
                     }
                 }
-                //#region Obsolete
-//                if (data.getFilesData() != null) {
-//                    Path filesDirectory = Paths.get(UPLOAD_PATH);
-//                    for (Map.Entry<String, List<MultipartFile>> entry : data.getFilesData().entrySet()) {
-//                        for (MultipartFile file : entry.getValue()) {
-//                            if (file != null && !file.isEmpty()) {
-//                                Path filesPath = filesDirectory.resolve(file.getOriginalFilename());
-//                                if (!Files.exists(filesPath)) {
-//                                    try {
-//                                        // Create an InputStreamResource from the file path
-//                                        InputStreamResource resource = new InputStreamResource(Files.newInputStream(filesPath));
-//                                        if (data.getOperation().equals(OperationEnum.PublishFeatureFileToXray.name())) {
-//                                            builder.part("file", resource)
-//                                                    .header("Content-Disposition", "form-data; name=file; filename=" + file.getOriginalFilename());
-//                                        }
-//                                    }catch (Exception e){
-//                                        // Handle the exception appropriately
-//                                        ActivityLog activityLog = new ActivityLog().AddNew("XRAY_PUBLISH_REPORT", "Error reading file from disk: " + data.getId() + " - " + e.getMessage());
-//                                        _activityLogRepository.saveAndFlush(activityLog);
-//                                    }
-//                                }
-//                            } else {
-//                                ActivityLog activityLog = new ActivityLog().AddNew("XRAY_PUBLISH_REPORT", "File upload is null for: " + entry.getKey());
-//                                _activityLogRepository.saveAndFlush(activityLog);
-//                            }
-//                        }
-//                    }
-//
-//                }
-                //#endregion
+
                 GenericWebClient client = new GenericWebClient(webClient);
                 String xRayFeatureEndpoint = String.format(data.getUrl());
                 if(data.getOperation().equals(OperationEnum.PublishFeatureFileToXray.name())){
                     Mono<AppResponse<XrayAppFeaturesResponse>> respEntity = client.postMultipartRequest(xRayFeatureEndpoint, null, builder, XrayAppFeaturesResponse.class, XrayAppResponse.class, data.getToken());
                     Mono<AppResponse<XrayAppFeaturesResponse>> objResp = respEntity.subscribeOn(Schedulers.boundedElastic());
-                    outResp = objResp.map(AppResponse->{
+
+                    httpResp = objResp.map(AppResponse->{
                         String error = AppResponse.getError();
+                        int StatCode = AppResponse.getStatCode();
                         XrayAppFeaturesResponse body = AppResponse.getResult();
+
+                        if(error != null && !error.isEmpty()){
+                            this.UpdateRequestLog(data.getId(),body != null ? body.toString(): null, Status.ERROR, ((body != null && body.getErrors() != null && body.getErrors().length > 0) ? body.getErrors()[0]: ":")+error);
+                        }
                         if (body != null) {
                             if(body.getErrors().length > 0){
                                 this.UpdateRequestLog(data.getId(),body.toString(), Status.COMPLETED_WITH_ERROR,body.getErrors()[0]);
@@ -324,25 +321,29 @@ public class XRayService {
                                 this.UpdateRequestLog(data.getId(),String.format("%s | %s",body.getUpdatedOrCreatedTests()[0].toString(),body.getUpdatedOrCreatedPreconditions()[0].toString()), Status.COMPLETED, null);
                             }
                         }
-                        return AppResponse.isSuccess();
+                        return new AppResponse<Boolean>(AppResponse.isSuccess(), ((body != null && body.getErrors() != null && body.getErrors().length > 0) ? body.getErrors()[0]: ":")+error,StatCode,AppResponse.isSuccess());
                     });
-                }else if(data.getOperation().equals(OperationEnum.PublishCucumberToXray.name())){
+                }else if(data.getOperation().equals(OperationEnum.PublishCucumberToXray.name()) || data.getOperation().equals(OperationEnum.PublishJunitToXray.name())){
                     Mono<AppResponse<XrayAppResponse>> respEntity =  client.postMultipartRequest(xRayFeatureEndpoint, null, builder, XrayAppResponse.class, XrayAppResponse.class, data.getToken());
                     Mono<AppResponse<XrayAppResponse>> objResp = respEntity.subscribeOn(Schedulers.boundedElastic());
-                    outResp = objResp.map(AppResponse->{
+
+                      httpResp = objResp.map(AppResponse->{
                         String error = AppResponse.getError();
+                        int StatCode = AppResponse.getStatCode();
                         XrayAppResponse body = AppResponse.getResult();
-                        if (body != null) {
+
+                        if(error != null && !error.isEmpty()){
+                            this.UpdateRequestLog(data.getId(),body != null ? body.toString(): null, Status.ERROR, error + (body != null ? body.getError(): ""));
+                        }else if (body != null){
                             if(body.getError() != null){
                                 this.UpdateRequestLog(data.getId(),body.toString(), Status.COMPLETED_WITH_ERROR,body.getError());
                             }else{
                                 this.UpdateRequestLog(data.getId(),body.toString(), Status.COMPLETED, null);
                             }
                         }
-                        return AppResponse.isSuccess();
+                        return new AppResponse<Boolean>(AppResponse.isSuccess(), (body != null ? body.getError(): ":")+error,StatCode,AppResponse.isSuccess());
                     });
                 }
-                
             }
         }catch(Exception e){
             CompletableFuture.runAsync(() -> {
@@ -350,7 +351,7 @@ public class XRayService {
                 _activityLogRepository.saveAndFlush(activityLog);
             }, Executors.newCachedThreadPool());
         }
-        return outResp;
+        return httpResp;
     }
 
 

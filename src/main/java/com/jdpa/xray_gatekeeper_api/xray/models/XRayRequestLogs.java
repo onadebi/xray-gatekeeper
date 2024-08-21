@@ -66,6 +66,7 @@ public class XRayRequestLogs {
         CANCELED,
         COMPLETED,
         COMPLETED_WITH_ERROR,
+        ERROR
     }
 
     public XRayRequestLogs AddNew(String filePath, String fileNames, Status status,String operation, String data) {
