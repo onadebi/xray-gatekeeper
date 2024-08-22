@@ -48,10 +48,6 @@ public class FilesTransferData {
         fileData.setUrl(url);
         fileData.setMessage(message);
         fileData.setOperation(operation);
-//        if(projectKey != null && !projectKey.isEmpty())
-//        {
-//            fileData.setProjectKey(projectKey);
-//        }
         if(filesData != null && !filesData.isEmpty()){
             fileData.setFilesData(filesData);
             List<String> namesList = new ArrayList<>();
@@ -65,18 +61,6 @@ public class FilesTransferData {
         return fileData;
     }
 
-//    public FilesTransferData AddNew(String token, Map<String, List<MultipartFile>> filesData, String operation, String projectKey, String message){
-//        FilesTransferData fileData = new FilesTransferData();
-//        fileData.setMessage(message);
-//        fileData.setToken(token);
-//        fileData.setOperation(operation);
-//        if(projectKey != null && !projectKey.isEmpty())
-//        {
-//            fileData.setProjectKey(projectKey);
-//        }
-//        fileData.setFilesData(filesData);
-//        return fileData;
-//    }
 
     /**
      * Converts the FilesTransferData object to a JSON string representation.

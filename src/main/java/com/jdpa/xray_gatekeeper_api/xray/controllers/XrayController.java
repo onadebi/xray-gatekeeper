@@ -3,9 +3,9 @@ package com.jdpa.xray_gatekeeper_api.xray.controllers;
 import com.jdpa.xray_gatekeeper_api.helpers.RateLimitProtection;
 import com.jdpa.xray_gatekeeper_api.helpers.Validators;
 import com.jdpa.xray_gatekeeper_api.xray.dtos.AppResponse;
-import com.jdpa.xray_gatekeeper_api.xray.dtos.XrayAppFeaturesResponse;
-import com.jdpa.xray_gatekeeper_api.xray.dtos.XrayAppResponse;
+import com.jdpa.xray_gatekeeper_api.xray.models.XRayRequestLogs;
 import com.jdpa.xray_gatekeeper_api.xray.models.XrayAuth;
+import com.jdpa.xray_gatekeeper_api.xray.services.XRayRequestLogsDBService;
 import com.jdpa.xray_gatekeeper_api.xray.services.XRayService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -17,12 +17,13 @@ import reactor.core.publisher.Mono;
 @RequestMapping(path="/api/v2/xray")
 public class XrayController {
 
-
     private final XRayService _xrayService;
+    private final XRayRequestLogsDBService _xrayRequestLogsDBService;
 
     @Autowired
-    public XrayController(XRayService xrayService) {
+    public XrayController(XRayService xrayService, XRayRequestLogsDBService xrayRequestLogsDBService) {
         this._xrayService = xrayService;
+        this._xrayRequestLogsDBService = xrayRequestLogsDBService;
     }
 
     @RateLimitProtection
@@ -64,10 +65,15 @@ public class XrayController {
     public Mono<ResponseEntity<AppResponse<String>>> projectKey(@RequestParam("file") MultipartFile file,
                                                                                  @RequestParam("projectKey") String projectKey){
         String token= Validators.extractBearerToken();
-        Mono<ResponseEntity<AppResponse<String>>> objResp =  _xrayService.PublishFeatureFileToXray(file,projectKey, token)
+        return  _xrayService.PublishFeatureFileToXray(file,projectKey, token)
                 .map(appResponse -> ResponseEntity
                         .status(appResponse.getStatCode())
                         .body(appResponse));
-        return objResp;
+    }
+
+    @DeleteMapping("/cancel/{requestId}")
+    public ResponseEntity<AppResponse<String>> CancelRequest(@PathVariable long requestId){
+        AppResponse<String> objResp = _xrayRequestLogsDBService.UpdateRequestStatus(requestId, XRayRequestLogs.Status.CANCELED);
+        return ResponseEntity.status(objResp.getStatCode()).body(objResp);
     }
 }
