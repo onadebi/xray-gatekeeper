@@ -302,7 +302,10 @@ public class XRayService {
                             if(body.getErrors().length > 0){
                                 _xrayRequestLogsDBService.UpdateRequestLog(data.getId(),body.toString(), Status.COMPLETED_WITH_ERROR,body.getErrors()[0]);
                             }else{
-                                _xrayRequestLogsDBService.UpdateRequestLog(data.getId(),String.format("%s | %s",body.getUpdatedOrCreatedTests()[0].toString(),body.getUpdatedOrCreatedPreconditions()[0].toString()), Status.COMPLETED, null);
+//                                String allResponse = body.toString();
+//                                String getUpdatedOrCreated = (body.getUpdatedOrCreatedTests() != null && body.getUpdatedOrCreatedTests().length> 0) ? body.getUpdatedOrCreatedTests()[0].toString(): null;
+//                                String getUpdatedOrCreatedPreconditions = (body.getUpdatedOrCreatedPreconditions() != null && body.getUpdatedOrCreatedPreconditions().length > 0) ? body.getUpdatedOrCreatedPreconditions()[0].toString(): null;
+                                _xrayRequestLogsDBService.UpdateRequestLog(data.getId(),body.toString(), Status.COMPLETED, null);
                             }
                         }
                         return new AppResponse<Boolean>(AppResponse.isSuccess(), ((body != null && body.getErrors() != null && body.getErrors().length > 0) ? body.getErrors()[0]: ":")+error,StatCode,AppResponse.isSuccess());

@@ -1,6 +1,8 @@
 package com.jdpa.xray_gatekeeper_api.messageQueue.rabbitmq;
 
+import com.jdpa.xray_gatekeeper_api.xray.dtos.AppResponse;
 import com.jdpa.xray_gatekeeper_api.xray.dtos.FilesTransferData;
+import com.jdpa.xray_gatekeeper_api.xray.services.XRayRateLimitService;
 import org.springframework.amqp.core.Message;
 import com.rabbitmq.client.Channel;
 import com.jdpa.xray_gatekeeper_api.xray.services.XRayService;
@@ -11,8 +13,11 @@ import org.springframework.stereotype.Component;
 public class Receiver implements ChannelAwareMessageListener {
 
     private final XRayService _xRayService;
-    public Receiver(XRayService xRayService) {
+    private final XRayRateLimitService _xrayRateLimitService;
+
+    public Receiver(XRayService xRayService, XRayRateLimitService xrayRateLimitService) {
         this._xRayService = xRayService;
+        this._xrayRateLimitService = xrayRateLimitService;
     }
 
     //#region Overrides
@@ -23,22 +28,27 @@ public class Receiver implements ChannelAwareMessageListener {
         try {
             FilesTransferData data = new FilesTransferData().fromJson(messageBody);
             if (data != null) {
-                _xRayService.XrayPublishImplementation(data).subscribe(result -> {
-                    if (result.isSuccess()) {
-                        System.out.println("Report Publish completed!");
+                AppResponse<String> rateCheck =  _xrayRateLimitService.rateLimit(data);
+                if(rateCheck.isSuccess()){
+                    _xRayService.XrayPublishImplementation(data).subscribe(result -> {
+                        if (result.isSuccess()) {
+                            System.out.println("Report Publish completed!");
 
-                        // Acknowledge the message upon successful processing
-                        try {
-                            channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
-                            System.out.println("Removed from queue <" + messageBody + ">");
-                        } catch (Exception e) {
-                            System.out.println("Acknowledgment error: " + e.getMessage());
+                            // Acknowledge the message upon successful processing
+                            try {
+                                channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
+                                System.out.println("Removed from queue <" + messageBody + ">");
+                            } catch (Exception e) {
+                                System.out.println("Acknowledgment error: " + e.getMessage());
+                            }
+                        } else {
+                            System.out.println("Publish failed: "+result.getError());
+                            // Optionally, you can reject or requeue the message here
                         }
-                    } else {
-                        System.out.println("Publish failed: "+result.getError());
-                        // Optionally, you can reject or requeue the message here
-                    }
-                });
+                    });
+                }else{
+                    System.out.println(String.format("Rate limit exceeded for id: [<%s>]",data.getId()));
+                }
             } else {
                 //TODO: Log failed to database
                 System.out.println("Unable to parse data from message <" + messageBody + ">");
