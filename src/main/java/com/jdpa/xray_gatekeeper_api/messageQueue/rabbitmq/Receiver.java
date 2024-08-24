@@ -24,7 +24,6 @@ public class Receiver implements ChannelAwareMessageListener {
     @Override
     public void onMessage(Message message, Channel channel) throws Exception {
         String messageBody = new String(message.getBody());
-        //TODO: IMPLEMENT RATE LIMITATION HERE with ACTIONs to be TAKEN on DATA
         try {
             FilesTransferData data = new FilesTransferData().fromJson(messageBody);
             if (data != null) {
@@ -39,7 +38,7 @@ public class Receiver implements ChannelAwareMessageListener {
                                 channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
                                 System.out.println("Removed from queue <" + messageBody + ">");
                             } catch (Exception e) {
-                                System.out.println("Acknowledgment error: " + e.getMessage());
+                                System.err.println("Acknowledgment error: " + e.getMessage());
                             }
                         } else {
                             System.out.println("Publish failed: "+result.getError());
@@ -55,7 +54,7 @@ public class Receiver implements ChannelAwareMessageListener {
                 // Optionally, you can reject or requeue the message here
             }
         } catch (Exception e) {
-            System.out.println("Consumer Error: <" + e.getMessage() + ">");
+            System.err.println("Consumer Error: <" + e.getMessage() + ">");
         }
     }
     //#endregion

@@ -62,6 +62,9 @@ public class XRayRequestLogsDBService {
                 objResp.setSuccess(true);
                 objResp.setStatCode(200);
                 objResp.setResult(String.format("Record with id %s Updated successfully.",id));
+            }else{
+                objResp.setStatCode(404);
+                objResp.setResult(String.format("No Record found for id: [%s]",id));
             }
         }catch(Exception ex){
             System.out.println("Update request log failed. Error: " + ex.getMessage());

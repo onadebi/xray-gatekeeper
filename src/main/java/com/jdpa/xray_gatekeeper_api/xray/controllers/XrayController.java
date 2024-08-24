@@ -26,7 +26,6 @@ public class XrayController {
         this._xrayRequestLogsDBService = xrayRequestLogsDBService;
     }
 
-    @RateLimitProtection
     @GetMapping(value = {"/","", "/health", "/status"})
     public AppResponse<String> HealthCheck(){
         return AppResponse.success("XRay API is up and running", 200);
@@ -40,7 +39,6 @@ public class XrayController {
                         .body(appResponse));
     }
 
-    @RateLimitProtection(rateLimit = 10, rateDuration = 180000)
     @PostMapping("/junit/multipart")
     public Mono<ResponseEntity<AppResponse<String>>> junit(@RequestParam("results") MultipartFile results,
                                                                     @RequestParam("info") MultipartFile info){

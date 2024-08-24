@@ -13,9 +13,9 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMqConfig {
 
-    public static final String EXCHANGE_NAME = "XRayOpExchange";
-    public static final String QUEUE_NAME = "XRayOpQueue";
-    public static final String ROUTING_KEY = "jdpa.xrayop.routing.key";
+    public static final String EXCHANGE_NAME = AppConfig.EXCHANGE_NAME;// "XRayOpExchange";
+    public static final String QUEUE_NAME = AppConfig.QUEUE_NAME; // "XRayOpQueue";
+    public static final String ROUTING_KEY = AppConfig.ROUTING_KEY; // "jdpa.xrayop.routing.key";
 
     @Bean
     public TopicExchange exchange() {

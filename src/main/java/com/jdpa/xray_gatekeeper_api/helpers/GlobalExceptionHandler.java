@@ -13,7 +13,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RateLimitException.class)
     @ResponseBody
     public AppResponse<String> handleRateLimitException(RateLimitException ex) {
-        AppResponse<String> errorMessage = ex.toApiErrorMessage(""); // Provide the appropriate path if needed
+        AppResponse<String> errorMessage = ex.toApiErrorMessage("");
         return errorMessage;
     }
 }

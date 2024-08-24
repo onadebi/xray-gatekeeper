@@ -1,8 +1,28 @@
 #  <span style='color:cornflowerblue'>Xray-gatekeeper</span>
 
 Xray GateKeeper is a SpringBoot application designed to act as a gatekeeper for applications interacting with XRay cloud to public results to Jira. Being API based, it can work with Playwright and Java test frameworks.
+## Variables:
 
-## Implemented endpoints:
+The below environment variables are needed to be set for the application to run smoothly.
+```json
+RATE_DURATION=120000
+RATE_LIMIT=3
+
+XRAY_DATABASE=###[Name of application database]
+XRAYDB_PASSWORD=###[Application database user password]
+XRAYDB_USER=###[Application database user]
+
+RABBITMQ_HOST=###
+RABBITMQ_PORT=###
+RABBITMQ_USER=###
+RABBITMQ_PASSWORD=###
+
+XRayOpExchange=###[For defning the MessageQueue Exchange name]
+XRayOpQueue=###[For defning the MessageQueue Queue name]
+XRayRoutingKey=###[For defning the MessageQueue RoutingKey name]
+```
+The API by default is configured to use a MariaDB driver with MariaDBDialect. Hence, the `XRAY_DATABASE` should be a MariaDB database.
+## API Endpoints:
 
 The application would provide several endpoints for interacting with Xray cloud. The base endpoint is of the format ```http://localhost:8080/api/v2/xray``` . The inputs format for the endpoints may vary depending on endpoint being executed. Generally the response would have a format of:
 ```json
@@ -16,7 +36,8 @@ The application would provide several endpoints for interacting with Xray cloud.
 **Results** would contain any response from the server and may be a simple string or object type. **Success** is always a boolean indicating of the intended operation was successful or not. **Statcode** would convey the server status code response and **Error** may be null if no errors or convey any error message if present.
 <br/>Some of these endpoints include:
 
-> 1. **XRay Authentication** (`/authenticate`): This endpoint is used to authenticate against the XRay cloud. The endpoint expects input parameters in JSON format as defined below:
+### 1. **XRay Authentication** (`/authenticate`): 
+>This endpoint is used to authenticate against the XRay cloud. The endpoint expects input parameters in JSON format as defined below:
 ```json
 {
     "client_id": "******",
@@ -24,7 +45,8 @@ The application would provide several endpoints for interacting with Xray cloud.
 }
 ```
 
-> 2. **Upload JUnit Xml Report** (`/junit/multipart`): This endpoint passes to the server as header, a Bearer token gotten from successful authentication from `/authenticate` endpoint. Two files are passed `xray-report.xml` and `project-info.json` as parameters `results` and `info` respectively.
+### 2. **Upload JUnit Xml Report** (`/junit/multipart`):
+>This endpoint passes to the server as header, a Bearer token gotten from successful authentication from `/authenticate` endpoint. Two files are passed `xray-report.xml` and `project-info.json` as parameters `results` and `info` respectively.
 <p>The <code>xray-report.xml</code> has sample format:</p>
 
 ```xml
@@ -56,7 +78,8 @@ The application would provide several endpoints for interacting with Xray cloud.
 <i>issuetype</i> is Jira IssueType '<i>Test Execution</i>' id.
 
 
-> 3. **Upload Cucumber Json Report** (`/cucumber/multipart`): This endpoint passes to the server as header, a Bearer token gotten from successful authentication from `/authenticate` endpoint. Two files are passed `results.json` and `issueFields.json` as parameters `results` and `info` respectively.
+### 3. **Upload Cucumber Json Report** (`/cucumber/multipart`):
+>This endpoint passes to the server as header, a Bearer token gotten from successful authentication from `/authenticate` endpoint. Two files are passed `results.json` and `issueFields.json` as parameters `results` and `info` respectively.
 <p>The <code>results.json</code> has sample format:</p>
 
 ```json
@@ -142,8 +165,17 @@ The application would provide several endpoints for interacting with Xray cloud.
 ```
 <i>testPlanKey</i> is jira issue of type '<i>Test Plan</i>' key.
 
+### 4. **Features upload** (`/feature?projectKey={corp}`):
+>This endpoint receives in the request, a Bearer token gotten from successful authentication from `/authenticate` endpoint. Also, the projectKey is passed as a URL Request parameter.
+<br/>Additionally, a feature file (`*.feature`) or zipped file (`*.zip`) of feature files is expected to be passed as a form-data body to the parameter name `file`.
 
 
+### 5. **Cancel Request** (`/cancel/{requestId}`):
+>This endpoint is responsible for cancelling any requests pending in the message queue and that has not been executed, but rather has a PENDING status in the database table.
+
+
+### 6. **Health Check** (`/health`, `/status`):
+>This endpoint is used to check the health/status of the Springboot application status; if its running successfully or not
 ## Add your files
 
 - [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
