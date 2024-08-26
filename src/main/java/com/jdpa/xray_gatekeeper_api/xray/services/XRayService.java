@@ -69,8 +69,6 @@ public class XRayService {
                 if (statusCode == HttpStatus.OK.value()) {
                     // Clean response to remove outer double quotation
                     String cleanedResponse = responseBody != null ? responseBody.replaceAll("^\"|\"$", "") : null;
-                    //TODO: May not need to be logged.
-                    _xrayRequestLogsDBService.SaveRequestLog("--", "--", Status.COMPLETED, OperationEnum.AuthenticateXRay, "");
                     return Mono.just(AppResponse.success(cleanedResponse, statusCode));
                 } else {
                     return Mono.just(AppResponse.failed(responseBody, "Non-200 status code: " + statusCode, statusCode));

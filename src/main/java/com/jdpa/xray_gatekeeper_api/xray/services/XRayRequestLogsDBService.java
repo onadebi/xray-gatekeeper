@@ -2,20 +2,27 @@ package com.jdpa.xray_gatekeeper_api.xray.services;
 
 import com.jdpa.xray_gatekeeper_api.xray.dtos.AppResponse;
 import com.jdpa.xray_gatekeeper_api.xray.dtos.OperationEnum;
+import com.jdpa.xray_gatekeeper_api.xray.dtos.RequestStatusDTO;
+import com.jdpa.xray_gatekeeper_api.xray.dtos.UserRequestStatusDTO;
+import com.jdpa.xray_gatekeeper_api.xray.dtos.reports.ReportsCategoryEnum;
 import com.jdpa.xray_gatekeeper_api.xray.models.XRayRequestLogs;
 import com.jdpa.xray_gatekeeper_api.xray.repository.XRayServiceRepository;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Service
 public class XRayRequestLogsDBService {
 
     private final XRayServiceRepository _xrayServiceRepository;
+    private final ActivityLogService _activityLogService;
 
-    public XRayRequestLogsDBService(XRayServiceRepository _xrayServiceRepository) {
+    public XRayRequestLogsDBService(XRayServiceRepository _xrayServiceRepository, ActivityLogService activityLogService) {
         this._xrayServiceRepository = _xrayServiceRepository;
+        _activityLogService = activityLogService;
     }
 
 //    @Async
@@ -40,8 +47,7 @@ public class XRayRequestLogsDBService {
                 _xrayServiceRepository.save(log);
             }
         }catch(Exception ex){
-            //TODO: Log exception activity
-            System.out.println("Update request log failed. Error: " + ex.getMessage());
+            System.err.println("Update request log failed. Error: " + ex.getMessage());
         }
     }
 
@@ -97,5 +103,56 @@ public class XRayRequestLogsDBService {
         return objResp;
     }
 
-
+    //#region OLD - Obsolete for reuse
+//    public AppResponse<List<RequestStatusDTO>> GetOverallReportsPublishStatus(UserRequestStatusDTO request ){
+//        AppResponse<List<RequestStatusDTO>> objResp = new AppResponse<>();
+//        try {
+//            List<RequestStatusDTO> overallReports = _xrayServiceRepository.getXRayRequestsStatusByDateRange(request.getFrom(), request.getTo());
+//            if(!overallReports.isEmpty()){
+//                objResp.setSuccess(true);
+//                objResp.setStatCode(200);
+//                objResp.setResult(overallReports);
+//            }
+//            else{
+//                objResp.setStatCode(404);
+//                objResp.setError("No records found.");
+//            }
+//        }catch(Exception ex){
+//            _activityLogService.save("Log", "Failed to get overall reports publish status. Error: " + ex.getMessage());
+//            objResp.setStatCode(501);
+//            objResp.setError("Server error: " + ex.getMessage());
+//        }
+//        return objResp;
+//    }
+    //#endregion
+    public AppResponse<List<RequestStatusDTO>> GetOverallReportsPublished(UserRequestStatusDTO request, ReportsCategoryEnum category ){
+        AppResponse<List<RequestStatusDTO>> objResp = new AppResponse<>();
+        try {
+            List<RequestStatusDTO> overallReports = new ArrayList<RequestStatusDTO>();
+            switch(category){
+                case ReportsCategoryEnum.ByStatus:
+                    overallReports = _xrayServiceRepository.getXRayRequestsStatusByDateRange(request.getFrom(), request.getTo());
+                    break;
+                case ReportsCategoryEnum.ByOperation:
+                    overallReports = _xrayServiceRepository.getXRayRequestsOperationsByDateRange(request.getFrom(), request.getTo());
+                    break;
+                default:
+                    break;
+            }
+            if(!overallReports.isEmpty()){
+                objResp.setSuccess(true);
+                objResp.setStatCode(200);
+                objResp.setResult(overallReports);
+            }
+            else{
+                objResp.setStatCode(404);
+                objResp.setError("No records found.");
+            }
+        }catch(Exception ex){
+            _activityLogService.save("Log", "Failed to get overall reports operation. Error: " + ex.getMessage());
+            objResp.setStatCode(501);
+            objResp.setError("Server error: " + ex.getMessage());
+        }
+        return objResp;
+    }
 }

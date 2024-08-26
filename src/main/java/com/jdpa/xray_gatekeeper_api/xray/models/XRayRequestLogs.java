@@ -14,7 +14,7 @@ public class XRayRequestLogs {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private long id;
 
     @Column(name = "file_path", nullable = false, length = 255)
     private String filePath;
