@@ -10,5 +10,4 @@ import java.lang.annotation.Target;
 public @interface RateLimitProtection {
     int rateLimit() default 0;
     long rateDuration() default 0;
-
 }

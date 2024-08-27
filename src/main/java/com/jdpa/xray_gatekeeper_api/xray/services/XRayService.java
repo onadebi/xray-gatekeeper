@@ -300,9 +300,6 @@ public class XRayService {
                             if(body.getErrors().length > 0){
                                 _xrayRequestLogsDBService.UpdateRequestLog(data.getId(),body.toString(), Status.COMPLETED_WITH_ERROR,body.getErrors()[0]);
                             }else{
-//                                String allResponse = body.toString();
-//                                String getUpdatedOrCreated = (body.getUpdatedOrCreatedTests() != null && body.getUpdatedOrCreatedTests().length> 0) ? body.getUpdatedOrCreatedTests()[0].toString(): null;
-//                                String getUpdatedOrCreatedPreconditions = (body.getUpdatedOrCreatedPreconditions() != null && body.getUpdatedOrCreatedPreconditions().length > 0) ? body.getUpdatedOrCreatedPreconditions()[0].toString(): null;
                                 _xrayRequestLogsDBService.UpdateRequestLog(data.getId(),body.toString(), Status.COMPLETED, null);
                             }
                         }

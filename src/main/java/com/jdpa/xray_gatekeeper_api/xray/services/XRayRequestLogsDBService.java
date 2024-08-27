@@ -25,7 +25,6 @@ public class XRayRequestLogsDBService {
         _activityLogService = activityLogService;
     }
 
-//    @Async
     protected long SaveRequestLog(String filePath, String fileNames, XRayRequestLogs.Status status, OperationEnum operation, String data){
         XRayRequestLogs newObj = new XRayRequestLogs().AddNew(filePath, fileNames, status, operation.name(),data);
         _xrayServiceRepository.saveAndFlush(newObj);
@@ -103,28 +102,6 @@ public class XRayRequestLogsDBService {
         return objResp;
     }
 
-    //#region OLD - Obsolete for reuse
-//    public AppResponse<List<RequestStatusDTO>> GetOverallReportsPublishStatus(UserRequestStatusDTO request ){
-//        AppResponse<List<RequestStatusDTO>> objResp = new AppResponse<>();
-//        try {
-//            List<RequestStatusDTO> overallReports = _xrayServiceRepository.getXRayRequestsStatusByDateRange(request.getFrom(), request.getTo());
-//            if(!overallReports.isEmpty()){
-//                objResp.setSuccess(true);
-//                objResp.setStatCode(200);
-//                objResp.setResult(overallReports);
-//            }
-//            else{
-//                objResp.setStatCode(404);
-//                objResp.setError("No records found.");
-//            }
-//        }catch(Exception ex){
-//            _activityLogService.save("Log", "Failed to get overall reports publish status. Error: " + ex.getMessage());
-//            objResp.setStatCode(501);
-//            objResp.setError("Server error: " + ex.getMessage());
-//        }
-//        return objResp;
-//    }
-    //#endregion
     public AppResponse<List<RequestStatusDTO>> GetOverallReportsPublished(UserRequestStatusDTO request, ReportsCategoryEnum category ){
         AppResponse<List<RequestStatusDTO>> objResp = new AppResponse<>();
         try {
