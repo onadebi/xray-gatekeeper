@@ -1,11 +1,76 @@
-include:
-  project: 'corp/automation/cicd/templates'
-  ref: 1.0.17
-  file:
-    - '/pipelines/templates/common-automation-settings.yml'
-    - '/pipelines/templates/common-automation-workflow.yml'
-    - '/pipelines/templates/common-automation-prereq-test.yml'
-    - '/pipelines/templates/common-automation-prereq-gitlab-scanning.yml'
+#include:
+#  project: 'corp/automation/cicd/templates'
+#  ref: 1.0.17
+#  file:
+#    - '/pipelines/templates/common-automation-settings.yml'
+#    - '/pipelines/templates/common-automation-workflow.yml'
+#    - '/pipelines/templates/common-automation-prereq-test.yml'
+#    - '/pipelines/templates/common-automation-prereq-gitlab-scanning.yml'
+
+image: docker:19
+
+services:
+  - name: docker:19-dind
+    alias: docker
+    command: ["--dns", "8.8.8.8", "--dns", "8.8.4.4"]
+
+default:
+  tags:
+    - dc:london
+
+variables:
+  SSH_PRIVATE_KEY: $SSH_PRIVATE_KEY
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_IMAGE: $CI_REGISTRY/corp/automation/libraries/xray-gatekeeper/xray-gatekeeper-api
+  CI_REGISTRY: $CI_REGISTRY
+  CI_REGISTRY_USER: gitlab-ci-token
+  CI_REGISTRY_PASSWORD: $CI_REGISTRY_PASSWORD
+
+stages:
+  - build
+  - deploy
+
+before_script:
+  - apk update && apk add openssh-client bind-tools curl sudo
+  - eval $(ssh-agent -s)
+  - echo "$SSH_PRIVATE_KEY" | tr -d '\r' > /tmp/id_rsa
+  - chmod 600 /tmp/id_rsa
+  - ssh-add /tmp/id_rsa
+  - mkdir -p ~/.ssh
+  - chmod 700 ~/.ssh
+  - echo "172.16.139.79 lops-qate-xmf1" >> /etc/hosts
+  - ssh-keyscan 172.16.139.79 >> ~/.ssh/known_hosts
+
+build:
+  stage: build
+  script:
+    - echo "Building the Docker image..."
+
+  only:
+    - feature/sqa-613-deploy
+  when: manual
+  variables:
+    DOCKER_DRIVER: overlay2
+  services:
+    - name: docker:19-dind
+      alias: docker
+      command: ["--dns", "8.8.8.8", "--dns", "8.8.4.4"]
+
+deploy:
+  stage: deploy
+  needs: ["build"]
+  script:
+    - echo "Deploying the application..."
+
+  only:
+    - feature/sqa-613-deploy
+  when: manual
+  services:
+    - name: docker:19-dind
+      alias: docker
+      command: ["--dns", "8.8.8.8", "--dns", "8.8.4.4"]
+
 
 
 
