@@ -1,6 +1,8 @@
 FROM gradle:8.4-jdk21 AS build
 
 WORKDIR /app
+# Explicitly setting JAVA_HOME environment variable, due to possible invalid setting in gradle image
+ENV JAVA_HOME=/opt/java/openjdk
 
 # Copy Gradle wrapper and build configuration
 COPY gradle /app/gradle
