@@ -16,11 +16,13 @@ RUN uname -a
 RUN cat /proc/meminfo
 #RUN java --version
 RUN env
+RUN ls -la /usr/local/openjdk-21
 #endregion
 # Make the Gradle wrapper executable
 RUN chmod +x ./gradlew
 
 # Build the application, excluding tests
+RUN JAVA_HOME=/usr/local/openjdk-21 ./gradlew build -x test --no-daemon
 RUN ./gradlew build -x test --no-daemon
 
 # Use the same lightweight OpenJDK 21 image without unnecessary files for the final stage
