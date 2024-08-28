@@ -46,6 +46,12 @@ build:
   stage: build
   script:
     - echo "Building the Docker image..."
+    - docker build -t $DOCKER_IMAGE .
+    - echo "Logging in to the GitLab container registry..."
+    - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
+    - echo "Pushing image to registry..."
+    - docker push $DOCKER_IMAGE || { echo 'Docker push failed'; exit 1; }
+    - echo "Build stage succeed!"
 
   only:
     - feature/sqa-613-deploy_update
@@ -70,7 +76,3 @@ deploy:
     - name: docker:19-dind
       alias: docker
       command: ["--dns", "8.8.8.8", "--dns", "8.8.4.4"]
-
-
-
-
