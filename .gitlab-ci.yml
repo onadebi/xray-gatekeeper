@@ -46,8 +46,9 @@ build:
   stage: build
   script:
     - echo "Building the Docker image..."
+#    - docker-compose -v
 #    - docker build -t $DOCKER_IMAGE .
-    - docker-compose "$DOCKER_IMAGE/docker-compose.yml" up -d --build
+    - docker-compose -f "$CI_PROJECT_DIR/docker-compose.yml" up -d --build
     - echo "Logging in to the GitLab container registry..."
     - docker login -u $CI_REGISTRY_USER -p $CI_JOB_TOKEN $CI_REGISTRY
     - echo "Pushing image to registry..."
