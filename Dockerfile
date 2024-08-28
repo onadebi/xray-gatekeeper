@@ -22,10 +22,11 @@ COPY src /app/src
 #region DEBUG
 RUN uname -a
 RUN cat /proc/meminfo
-RUN #java -version
+# RUN java -version
 RUN env
-#RUN ls -la /usr/local/openjdk-21
+RUN ls -la /usr/local/openjdk-21
 #endregion
+
 # Make the Gradle wrapper executable
 RUN chmod +x ./gradlew
 
