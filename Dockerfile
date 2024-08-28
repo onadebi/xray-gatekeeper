@@ -11,6 +11,9 @@ COPY settings.gradle /app/
 # Copy the source code
 COPY src /app/src
 
+# Set executable permissions for gradlew
+RUN chmod +x gradlew
+
 RUN ./gradlew build -x test
 
 # Usage of lightweight JDK image for running the application, so as to make the container lighter
