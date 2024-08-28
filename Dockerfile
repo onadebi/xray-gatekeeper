@@ -23,6 +23,6 @@ WORKDIR /app
 COPY --from=build /app/build/libs/xray-gatekeeper-api-0.0.1-SNAPSHOT.jar /app/xray-gatekeeper-api.jar
 
 # Expose the port the application runs on
-EXPOSE 8080
+EXPOSE 8485
 
-ENTRYPOINT ["java", "-jar", "/app/xray-gatekeeper-api.jar"]
+CMD ["java", "-jar", "/app/xray-gatekeeper-api.jar"]
