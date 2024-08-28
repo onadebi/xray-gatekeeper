@@ -41,6 +41,14 @@ before_script:
   - chmod 700 ~/.ssh
   - echo "172.16.139.79 lops-qate-xmf1" >> /etc/hosts
   - ssh-keyscan 172.16.139.79 >> ~/.ssh/known_hosts
+  # Download and install OpenJDK 21
+  - echo "Installing OpenJDK 21..."
+  - apk add --no-cache bash
+  - mkdir -p /opt/jdk
+  - curl -L "https://download.java.net/java/early_access/jdk21/19/GPL/openjdk-21-ea+19_linux-x64_bin.tar.gz" | tar -xz -C /opt/jdk
+  - export PATH="/opt/jdk/jdk-21/bin:$PATH"
+  - java -version
+  # Install Docker Compose
   - curl -L "https://github.com/docker/compose/releases/download/v2.3.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
   - chmod +x /usr/local/bin/docker-compose
   - docker-compose -v  # Verify installation
@@ -49,7 +57,6 @@ build:
   stage: build
   script:
     - echo "Building the Docker image..."
-#    - docker-compose -v
 #    - docker build -t $DOCKER_IMAGE .
     - docker-compose -f "$CI_PROJECT_DIR/docker-compose.yml" up -d --build
     - echo "Logging in to the GitLab container registry..."
