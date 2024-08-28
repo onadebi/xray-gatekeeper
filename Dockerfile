@@ -12,7 +12,9 @@ COPY settings.gradle /app/
 COPY src /app/src
 
 #region DEBUG
-RUN java --version
+RUN uname -a
+RUN cat /proc/meminfo
+#RUN java --version
 RUN env
 #endregion
 # Make the Gradle wrapper executable
