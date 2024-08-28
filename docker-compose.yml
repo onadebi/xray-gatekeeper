@@ -1,9 +1,9 @@
 services:
 
-  xray_gate_keeper_api:
+  xray_gatekeeper_api:
 #    restart: always
 #    image: ${DOCKER_REGISTRY-}xray_gate_keeper_api
-    container_name: xray_gate_keeper_api
+    container_name: xray-gate-keeper-api
     build:
       context: .
       dockerfile: Dockerfile
