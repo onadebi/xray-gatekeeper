@@ -41,17 +41,16 @@ before_script:
   - chmod 700 ~/.ssh
   - echo "172.16.139.79 lops-qate-xmf1" >> /etc/hosts
   - ssh-keyscan 172.16.139.79 >> ~/.ssh/known_hosts
-  # Download and install OpenJDK 21
-  - echo "Installing OpenJDK 21..."
-  - apk add --no-cache bash
-  - mkdir -p /opt/jdk
-  - curl -L "https://download.java.net/java/early_access/jdk21/19/GPL/openjdk-21-ea+19_linux-x64_bin.tar.gz" | tar -xz -C /opt/jdk
-  - export PATH="/opt/jdk/jdk-21/bin:$PATH"
-  - java -version
-  # Install Docker Compose
   - curl -L "https://github.com/docker/compose/releases/download/v2.3.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
   - chmod +x /usr/local/bin/docker-compose
   - docker-compose -v  # Verify installation
+  # Download and install OpenJDK 21
+  - echo "Installing OpenJDK 21..."
+  - mkdir -p /opt/jdk
+  - curl -L "https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz" -o /tmp/openjdk-21.tar.gz
+  - tar -xzvf /tmp/openjdk-21.tar.gz -C /opt/jdk
+  - export PATH="/opt/jdk/jdk-21/bin:$PATH"
+  - java -version
 
 build:
   stage: build
