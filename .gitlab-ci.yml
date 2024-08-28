@@ -48,7 +48,7 @@ build:
     - echo "Building the Docker image..."
 
   only:
-    - feature/sqa-613-deploy
+    - feature/sqa-613-deploy_update
   when: manual
   variables:
     DOCKER_DRIVER: overlay2
