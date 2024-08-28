@@ -2,6 +2,9 @@ FROM ubuntu:24.04 AS build
 
 WORKDIR /app
 
+# Add the missing GPG key
+RUN apt-get update && apt-get install -y gnupg \
+    && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 871920D1991BC93C
 
 RUN apt-get update && apt install -y openjdk-21-jdk \
     && apt-get clean
