@@ -7,7 +7,7 @@
 #    - '/pipelines/templates/common-automation-prereq-test.yml'
 #    - '/pipelines/templates/common-automation-prereq-gitlab-scanning.yml'
 
-image: openjdk:21-jdk-slim
+image: docker:19
 
 services:
   - name: docker:19-dind
@@ -44,15 +44,7 @@ before_script:
   - curl -L "https://github.com/docker/compose/releases/download/v2.3.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
   - chmod +x /usr/local/bin/docker-compose
   - docker-compose -v  # Verify installation
-  # Download and install OpenJDK 21
-#  - echo "Installing OpenJDK 21..."
-#  - mkdir -p /opt/jdk
-#  - curl -L "https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz" -o /tmp/openjdk-21.tar.gz
-#  - tar -xzvf /tmp/openjdk-21.tar.gz -C /opt/jdk
-#  - export PATH="/opt/jdk/jdk-21/bin:$PATH"
-#  - ls /opt/jdk/jdk-21/bin
-#  - echo $PATH
-  - java -version
+
 
 build:
   stage: build
