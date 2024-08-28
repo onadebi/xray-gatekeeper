@@ -2,10 +2,12 @@ FROM openjdk:21-jdk-slim AS build
 
 # Install Gradle
 RUN apt-get update && \
-    apt-get install -y wget unzip && \
+    apt-get install -y --no-install-recommends gnupg wget unzip && \
+    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 0E98404D386FA1D9 6ED0E7B82643E131 F8D2585B8783D481 54404762BBB6E853 BDE6D2B9216EC7A8 && \
     wget https://services.gradle.org/distributions/gradle-8.4-bin.zip -P /tmp && \
     unzip /tmp/gradle-8.4-bin.zip -d /opt && \
-    ln -s /opt/gradle-8.4/bin/gradle /usr/bin/gradle
+    ln -s /opt/gradle-8.4/bin/gradle /usr/bin/gradle && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 WORKDIR /app
 
