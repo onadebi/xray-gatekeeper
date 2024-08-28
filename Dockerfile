@@ -11,6 +11,10 @@ COPY settings.gradle /app/
 # Copy the source code
 COPY src /app/src
 
+#region DEBUG
+RUN java --version
+RUN env
+#endregion
 # Make the Gradle wrapper executable
 RUN chmod +x ./gradlew
 
