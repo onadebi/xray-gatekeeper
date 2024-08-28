@@ -21,7 +21,7 @@ RUN chmod +x ./gradlew
 # Build the application, excluding tests
 RUN ./gradlew build -x test --no-daemon
 
-# Use the same lightweight OpenJDK 21 image for the final stage
+# Use the same lightweight OpenJDK 21 image without unnecessary files for the final stage
 FROM openjdk:21-jdk-slim
 
 # Set the working directory inside the container
