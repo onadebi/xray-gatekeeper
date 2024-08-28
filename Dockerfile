@@ -18,8 +18,8 @@ RUN chmod +x gradlew
 
 #debug purpose:
 RUN whereis java
-
-RUN ./gradlew build -x test
+RUN gradle build -x test
+#RUN ./gradlew build -x test
 
 # Usage of lightweight JDK image for running the application, so as to make the container lighter
 FROM openjdk:21-jdk-slim
