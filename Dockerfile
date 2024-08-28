@@ -1,6 +1,11 @@
-FROM openjdk:21-jdk-slim AS build
+FROM ubuntu:latest AS build
 
 WORKDIR /app
+
+
+RUN apt-get update && apt install -y openjdk-21-jdk \
+    && apt-get clean
+
 
 # Copy Gradle wrapper and build configuration
 COPY gradle /app/gradle
@@ -14,15 +19,15 @@ COPY src /app/src
 #region DEBUG
 RUN uname -a
 RUN cat /proc/meminfo
-#RUN java --version
+RUN java -version
 RUN env
-RUN ls -la /usr/local/openjdk-21
+#RUN ls -la /usr/local/openjdk-21
 #endregion
 # Make the Gradle wrapper executable
 RUN chmod +x ./gradlew
 
 # Build the application, excluding tests
-RUN JAVA_HOME=/usr/local/openjdk-21 ./gradlew build -x test --no-daemon
+#RUN JAVA_HOME=/usr/local/openjdk-21 ./gradlew build -x test --no-daemon
 RUN ./gradlew build -x test --no-daemon
 
 # Use the same lightweight OpenJDK 21 image without unnecessary files for the final stage
