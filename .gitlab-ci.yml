@@ -50,6 +50,8 @@ before_script:
   - curl -L "https://download.oracle.com/java/21/latest/jdk-21_linux-x64_bin.tar.gz" -o /tmp/openjdk-21.tar.gz
   - tar -xzvf /tmp/openjdk-21.tar.gz -C /opt/jdk
   - export PATH="/opt/jdk/jdk-21/bin:$PATH"
+  - ls /opt/jdk/jdk-21/bin
+  - echo $PATH
   - java -version
 
 build:
