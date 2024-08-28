@@ -64,7 +64,7 @@ deploy:
     - echo "Deploying the application..."
 
   only:
-    - feature/sqa-613-deploy
+    - feature/sqa-613-deploy_update
   when: manual
   services:
     - name: docker:19-dind
