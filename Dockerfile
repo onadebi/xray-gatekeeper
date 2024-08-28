@@ -1,8 +1,6 @@
-FROM gradle:8.4-jdk21 AS build
+FROM openjdk:21-jdk-slim AS build
 
 WORKDIR /app
-# Explicitly setting JAVA_HOME environment variable, due to possible invalid setting in gradle image
-ENV JAVA_HOME=/opt/java/openjdk
 
 # Copy Gradle wrapper and build configuration
 COPY gradle /app/gradle
@@ -13,15 +11,13 @@ COPY settings.gradle /app/
 # Copy the source code
 COPY src /app/src
 
-# Set executable permissions for gradlew
-RUN chmod +x gradlew
+# Make the Gradle wrapper executable
+RUN chmod +x ./gradlew
 
-#debug purpose:
-RUN whereis java
-RUN gradle build -x test
-#RUN ./gradlew build -x test
+# Build the application, excluding tests
+RUN ./gradlew build -x test --no-daemon
 
-# Usage of lightweight JDK image for running the application, so as to make the container lighter
+# Use the same lightweight OpenJDK 21 image for the final stage
 FROM openjdk:21-jdk-slim
 
 # Set the working directory inside the container
@@ -33,4 +29,4 @@ COPY --from=build /app/build/libs/xray-gatekeeper-api-0.0.1-SNAPSHOT.jar /app/xr
 # Expose the port the application runs on
 EXPOSE 8485
 
-CMD ["java", "-jar", "/app/xray-gatekeeper-api.jar"]
+ENTRYPOINT ["java", "-jar", "/app/xray-gatekeeper-api.jar"]
