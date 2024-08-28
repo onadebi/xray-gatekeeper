@@ -1,6 +1,6 @@
 #  <span style='color:cornflowerblue'>Xray-gatekeeper</span>
 
-Xray GateKeeper is a SpringBoot application designed to act as a gatekeeper for applications interacting with XRay cloud to public results to Jira. Being API based, it can work with Playwright and Java test frameworks.
+Xray GateKeeper is a SpringBoot application designed to act as a gatekeeper for applications interacting with XRay cloud to publish results to Jira. Being API based, it can work with Playwright and Java test frameworks.
 ## Variables:
 
 The below environment variables are needed to be set for the application to run smoothly.

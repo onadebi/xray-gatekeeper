@@ -58,3 +58,7 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 }
+
+bootJar {
+	mainClass = 'com.jdpa.xray_gatekeeper_api.XrayGatekeeperApiApplication'
+}

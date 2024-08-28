@@ -1,0 +1,21 @@
+services:
+
+  xray_gate_keeper_api:
+#    restart: always
+#    image: ${DOCKER_REGISTRY-}xray_gate_keeper_api
+    container_name: xray_gate_keeper_api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - RATE_DURATION=60000
+      - RATE_LIMIT=60
+      - XRAY_DATABASE=${XRAY_DATABASE}
+      - XRAYDB_PASSWORD=${XRAYDB_PASSWORD}
+      - XRAYDB_USER=${XRAYDB_USER}
+      - RABBITMQ_HOST=${RABBITMQ_HOST}
+      - RABBITMQ_PORT=5672
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
+    ports:
+      - "8080:8080"
