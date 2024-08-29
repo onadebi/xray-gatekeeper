@@ -9,10 +9,10 @@ WORKDIR /app
 #    && rm -rf /var/lib/apt/lists/*
 
 # Set JAVA_HOME environment variable
-ENV JAVA_HOME=/opt/java/openjdk
+#ENV JAVA_HOME=/opt/java/openjdk
 
 # Verify JDK installation and display JAVA_HOME
-RUN echo $JAVA_HOME
+#RUN echo $JAVA_HOME
 
 # Add the missing GPG key
 #RUN apt-get update && apt-get install -y gnupg \
