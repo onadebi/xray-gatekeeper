@@ -8,12 +8,12 @@ WORKDIR /app
 #    sudo \
 #    && rm -rf /var/lib/apt/lists/*
 
-
 # Set JAVA_HOME environment variable
-# ENV JAVA_HOME=/usr/local/openjdk-21
+ENV JAVA_HOME=/opt/java/openjdk
 
 # Verify JDK installation and display JAVA_HOME
-RUN java -version && echo $JAVA_HOME
+RUN java -XX:MaxRAMPercentage=50.0 -version && echo $JAVA_HOME
+
 # Add the missing GPG key
 #RUN apt-get update && apt-get install -y gnupg \
 #    && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 871920D1991BC93C
