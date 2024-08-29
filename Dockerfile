@@ -2,11 +2,11 @@ FROM eclipse-temurin:21 AS build
 
 WORKDIR /app
 
-RUN apt-get update -qq && apt-get install -y --no-install-recommends -qq \
-    openssh-client \
-    curl \
-    sudo \
-    && rm -rf /var/lib/apt/lists/*
+#RUN apt-get update -qq && apt-get install -y --no-install-recommends -qq \
+#    openssh-client \
+#    curl \
+#    sudo \
+#    && rm -rf /var/lib/apt/lists/*
 
 
 # Set JAVA_HOME environment variable
