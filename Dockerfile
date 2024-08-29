@@ -1,7 +1,19 @@
-FROM openjdk:21-jdk-slim AS build
+FROM eclipse-temurin:21 AS build
 
 WORKDIR /app
 
+RUN apt-get update -qq && apt-get install -y --no-install-recommends -qq \
+    openssh-client \
+    curl \
+    sudo \
+    && rm -rf /var/lib/apt/lists/*
+
+
+# Set JAVA_HOME environment variable
+# ENV JAVA_HOME=/usr/local/openjdk-21
+
+# Verify JDK installation and display JAVA_HOME
+RUN java -version && echo $JAVA_HOME
 # Add the missing GPG key
 #RUN apt-get update && apt-get install -y gnupg \
 #    && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 871920D1991BC93C
@@ -24,7 +36,7 @@ RUN uname -a
 RUN cat /proc/meminfo
 # RUN java -version
 RUN env
-RUN ls -la /usr/local/openjdk-21
+RUN ls -la /opt/java/openjdk
 #endregion
 
 # Make the Gradle wrapper executable
@@ -33,6 +45,7 @@ RUN chmod +x ./gradlew
 # Build the application, excluding tests
 #RUN JAVA_HOME=/usr/local/openjdk-21 ./gradlew build -x test --no-daemon
 RUN ./gradlew build -x test --no-daemon
+#  > /dev/null 2>&1
 
 # Use the same lightweight OpenJDK 21 image without unnecessary files for the final stage
 FROM openjdk:21-jdk-slim
