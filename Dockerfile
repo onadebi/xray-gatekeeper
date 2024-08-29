@@ -12,7 +12,7 @@ WORKDIR /app
 ENV JAVA_HOME=/opt/java/openjdk
 
 # Verify JDK installation and display JAVA_HOME
-RUN java -XX:MaxRAMPercentage=50.0 -version && echo $JAVA_HOME
+RUN echo $JAVA_HOME
 
 # Add the missing GPG key
 #RUN apt-get update && apt-get install -y gnupg \
